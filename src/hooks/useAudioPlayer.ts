@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 export function useAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackRateRef = useRef(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -18,7 +19,10 @@ export function useAudioPlayer() {
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => setIsPlaying(false);
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+      audio.playbackRate = playbackRateRef.current;
+    };
 
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
@@ -60,11 +64,11 @@ export function useAudioPlayer() {
       // If same URL is already loaded, just play from start
       if (audioRef.current.src === url) {
         audioRef.current.currentTime = 0;
-        audioRef.current.play();
       } else {
         audioRef.current.src = url;
-        audioRef.current.play();
       }
+      audioRef.current.playbackRate = playbackRateRef.current;
+      audioRef.current.play();
     }
   }, []);
 
@@ -75,9 +79,10 @@ export function useAudioPlayer() {
   }, []);
 
   const setPlaybackRate = useCallback((rate: number) => {
+    playbackRateRef.current = rate;
+    setPlaybackRateState(rate);
     if (audioRef.current) {
       audioRef.current.playbackRate = rate;
-      setPlaybackRateState(rate);
     }
   }, []);
 
