@@ -177,7 +177,7 @@ export function UploadForm() {
               </>
             )}
           </div>
-          <div className="text-sm text-gray-400 mt-2">
+          <div className="text-sm text-gray-500 mt-2">
             Supported formats: MP3, WAV, M4A, OGG, WEBM
           </div>
         </div>
@@ -197,14 +197,14 @@ export function UploadForm() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Lesson Title <span className="text-gray-400">(optional)</span>
+          Lesson Title <span className="text-gray-500">(optional)</span>
         </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Auto-generated from first sentence if empty"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder:text-gray-400"
         />
       </div>
 
@@ -216,7 +216,7 @@ export function UploadForm() {
           <select
             value={foreignLang}
             onChange={(e) => setForeignLang(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 bg-white"
           >
             <option value="en">English</option>
             <option value="zh">Chinese</option>
@@ -234,7 +234,7 @@ export function UploadForm() {
           <select
             value={translationLang}
             onChange={(e) => setTranslationLang(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 bg-white"
           >
             <option value="zh">Chinese</option>
             <option value="en">English</option>
@@ -254,7 +254,7 @@ export function UploadForm() {
         <select
           value={whisperModel}
           onChange={(e) => setWhisperModel(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 bg-white"
         >
           <option value="tiny">Tiny (39MB) - Fastest, lower accuracy</option>
           <option value="base">Base (74MB) - Fast, good accuracy</option>
@@ -262,7 +262,7 @@ export function UploadForm() {
           <option value="medium">Medium (769MB) - Slower, high accuracy</option>
           <option value="large-v3">Large-v3 (3GB) - Slowest, highest accuracy</option>
         </select>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           Larger models are more accurate but slower to process
         </p>
       </div>
@@ -274,11 +274,11 @@ export function UploadForm() {
         <textarea
           value={foreignText}
           onChange={(e) => setForeignText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none h-40 resize-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none h-40 resize-none text-gray-900 placeholder:text-gray-400"
           placeholder="Paste the paragraph in the foreign language here..."
           required
         />
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           This is the text that will be read in the audio file
         </p>
       </div>
@@ -290,7 +290,7 @@ export function UploadForm() {
         <textarea
           value={translationText}
           onChange={(e) => setTranslationText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none h-40 resize-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none h-40 resize-none text-gray-900 placeholder:text-gray-400"
           placeholder="Paste the translation here..."
           required
         />
