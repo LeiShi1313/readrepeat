@@ -16,6 +16,9 @@ DEVICE = os.environ.get('WHISPER_DEVICE', 'cpu')  # 'cpu', 'cuda', or 'auto'
 COMPUTE_TYPE = os.environ.get('WHISPER_COMPUTE_TYPE', 'int8')  # 'int8', 'float16', 'float32'
 DEFAULT_MODEL_SIZE = os.environ.get('WHISPER_MODEL', 'base')  # 'tiny', 'base', 'small', 'medium', 'large-v3'
 
+# Model storage directory - persisted via volume mount
+MODEL_CACHE_DIR = os.environ.get('WHISPER_MODEL_DIR', '/app/data/models')
+
 
 def get_model(model_size: str = None):
     """Get or create Whisper model (cached per model size)"""
@@ -47,12 +50,16 @@ def get_model(model_size: str = None):
                 compute_type = 'int8'
                 logger.info('PyTorch not available, using CPU')
 
-        logger.info(f'Loading Whisper model: {model_size} (device={device}, compute_type={compute_type})')
+        # Ensure model cache directory exists
+        os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+
+        logger.info(f'Loading Whisper model: {model_size} (device={device}, compute_type={compute_type}, cache_dir={MODEL_CACHE_DIR})')
 
         _models[model_size] = WhisperModel(
             model_size,
             device=device,
-            compute_type=compute_type
+            compute_type=compute_type,
+            download_root=MODEL_CACHE_DIR
         )
 
     return _models[model_size]
