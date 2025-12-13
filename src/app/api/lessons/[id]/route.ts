@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { rm } from 'fs/promises';
+import path from 'path';
 
 export async function GET(
   request: NextRequest,
@@ -115,5 +117,56 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating lesson:', error);
     return NextResponse.json({ error: 'Failed to update lesson' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: lessonId } = await params;
+
+    // Verify lesson exists
+    const lesson = await db.query.lessons.findFirst({
+      where: eq(schema.lessons.id, lessonId),
+    });
+
+    if (!lesson) {
+      return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+    }
+
+    // Delete lesson directory (contains original audio, normalized audio, clips)
+    const lessonDir = path.join(process.cwd(), 'data', 'uploads', 'lessons', lessonId);
+    try {
+      await rm(lessonDir, { recursive: true, force: true });
+    } catch {
+      // Directory may not exist if no audio was uploaded
+    }
+
+    // Delete any pending jobs for this lesson
+    const pendingJobs = await db
+      .select()
+      .from(schema.jobs)
+      .where(eq(schema.jobs.status, schema.JOB_STATUS.PENDING));
+
+    for (const job of pendingJobs) {
+      try {
+        const payload = JSON.parse(job.payloadJson);
+        if (payload.lessonId === lessonId) {
+          await db.delete(schema.jobs).where(eq(schema.jobs.id, job.id));
+        }
+      } catch {
+        // Skip jobs with invalid JSON
+      }
+    }
+
+    // Delete lesson (sentences will be cascade deleted due to foreign key)
+    await db.delete(schema.lessons).where(eq(schema.lessons.id, lessonId));
+
+    return NextResponse.json({ message: 'Lesson deleted' });
+  } catch (error) {
+    console.error('Error deleting lesson:', error);
+    return NextResponse.json({ error: 'Failed to delete lesson' }, { status: 500 });
   }
 }

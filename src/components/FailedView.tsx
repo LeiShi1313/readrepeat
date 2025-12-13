@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { EditLessonForm } from '@/components/EditLessonForm';
 
@@ -24,7 +25,30 @@ interface FailedViewProps {
 }
 
 export function FailedView({ lesson }: FailedViewProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/lessons/${lesson.id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        router.push('/');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete lesson');
+      }
+    } catch {
+      alert('Failed to delete lesson');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   if (isEditing) {
     return <EditLessonForm lesson={lesson} onCancel={() => setIsEditing(false)} />;
@@ -58,6 +82,15 @@ export function FailedView({ lesson }: FailedViewProps) {
             </svg>
             Edit
           </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
           <form action={`/api/lessons/${lesson.id}/reprocess`} method="POST">
             <button
               type="submit"
@@ -68,6 +101,33 @@ export function FailedView({ lesson }: FailedViewProps) {
           </form>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Delete Lesson?</h3>
+            <p className="text-gray-600 mb-4">
+              This will permanently delete &quot;{lesson.title || 'Untitled'}&quot; and all associated audio files. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
