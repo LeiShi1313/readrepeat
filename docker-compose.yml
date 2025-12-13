@@ -1,3 +1,6 @@
+# CPU-only version - use this if you don't have a GPU or don't want GPU acceleration
+# Run with: docker compose -f docker-compose.cpu.yml up --build
+
 services:
   # Next.js Web Application
   web:
@@ -9,42 +12,32 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
-      # Persist SQLite database and uploads
       - ./data:/app/data
-    depends_on:
-      - worker
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/lessons"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/lessons').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
       retries: 3
+      start_period: 10s
 
-  # Python Worker with AMD GPU support (ROCm)
+  # Python Worker - CPU only
   worker:
     build:
       context: ./worker
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.cpu
     environment:
       - API_BASE_URL=http://web:3000
       - POLL_INTERVAL=5
-      # GPU settings - use 'auto' to auto-detect, 'cuda' for GPU, 'cpu' for CPU only
-      - WHISPER_DEVICE=auto
-      - WHISPER_COMPUTE_TYPE=float16
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
       - WHISPER_MODEL=base
-      # ROCm settings for AMD GPU
-      - HSA_OVERRIDE_GFX_VERSION=10.3.0
     volumes:
-      # Share the data directory with web service
       - ./data:/app/data
-    # AMD GPU device access
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
-    group_add:
-      - video
-      - render
     restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
 
 volumes:
   data:
