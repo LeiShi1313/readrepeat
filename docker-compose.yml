@@ -1,0 +1,54 @@
+services:
+  # Next.js Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Persist SQLite database and uploads
+      - ./data:/app/data
+    depends_on:
+      - worker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/lessons"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python Worker with AMD GPU support (ROCm)
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=http://web:3000
+      - POLL_INTERVAL=5
+      # GPU settings - use 'auto' to auto-detect, 'cuda' for GPU, 'cpu' for CPU only
+      - WHISPER_DEVICE=auto
+      - WHISPER_COMPUTE_TYPE=float16
+      - WHISPER_MODEL=base
+      # ROCm settings for AMD GPU
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+    volumes:
+      # Share the data directory with web service
+      - ./data:/app/data
+    # AMD GPU device access
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+      - render
+    restart: unless-stopped
+    # Wait for web to be ready before starting
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  data:

@@ -1,0 +1,21 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+
+# Test files
+test_*
+*_test.py
+
+# Docker
+Dockerfile*
+.dockerignore

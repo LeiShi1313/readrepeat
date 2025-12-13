@@ -1,0 +1,44 @@
+# CPU-only version - use this if you don't have a GPU or don't want GPU acceleration
+# Run with: docker compose -f docker-compose.cpu.yml up --build
+
+services:
+  # Next.js Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - worker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/lessons"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python Worker - CPU only
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.cpu
+    environment:
+      - API_BASE_URL=http://web:3000
+      - POLL_INTERVAL=5
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+      - WHISPER_MODEL=base
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  data:
