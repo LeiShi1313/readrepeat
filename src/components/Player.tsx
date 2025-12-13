@@ -37,6 +37,8 @@ export function Player({ lesson, mode }: PlayerProps) {
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [revealedSentences, setRevealedSentences] = useState<Set<number>>(new Set());
   const [lastPlayedUrl, setLastPlayedUrl] = useState<string | null>(null);
+  const [continuousPlay, setContinuousPlay] = useState(false);
+  const [wasPlaying, setWasPlaying] = useState(false);
 
   const { isPlaying, playClip, pause, setPlaybackRate, playbackRate } = useAudioPlayer();
 
@@ -58,6 +60,31 @@ export function Player({ lesson, mode }: PlayerProps) {
       setLastPlayedUrl(null);
     }
   }, [isPlaying, lastPlayedUrl, cacheAudio]);
+
+  // Track playing state for continuous play detection
+  useEffect(() => {
+    setWasPlaying(isPlaying);
+  }, [isPlaying]);
+
+  // Continuous play: auto-advance when clip finishes
+  useEffect(() => {
+    if (continuousPlay && wasPlaying && !isPlaying) {
+      // Clip just finished, advance to next
+      if (currentSentenceIdx < lesson.sentences.length - 1) {
+        const nextIdx = currentSentenceIdx + 1;
+        const nextSentence = lesson.sentences[nextIdx];
+        setCurrentSentenceIdx(nextIdx);
+        if (nextSentence?.id) {
+          const url = `/api/media/sentences/${nextSentence.id}/clip`;
+          // Small delay to ensure state updates
+          setTimeout(() => {
+            playClip(url);
+            setLastPlayedUrl(url);
+          }, 100);
+        }
+      }
+    }
+  }, [isPlaying, wasPlaying, continuousPlay, currentSentenceIdx, lesson.sentences, playClip]);
 
   // Navigation handlers
   const goToNext = useCallback(() => {
@@ -216,25 +243,76 @@ export function Player({ lesson, mode }: PlayerProps) {
             />
           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">
-              Sentence {currentSentenceIdx + 1} of {lesson.sentences.length}
+          <div className="flex items-center justify-between">
+            {/* Sentence counter */}
+            <span className="text-sm text-gray-500 min-w-[100px]">
+              {currentSentenceIdx + 1} / {lesson.sentences.length}
             </span>
 
-            {/* Keyboard hints */}
-            <div className="hidden sm:flex items-center gap-4 text-xs text-gray-400">
-              <span>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">Space</kbd> Play
-              </span>
-              <span>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">J/K</kbd> Navigate
-              </span>
-              {mode === 'B' && (
-                <span>
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">H</kbd> Reveal
-                </span>
-              )}
+            {/* Audio controls */}
+            <div className="flex items-center gap-2">
+              {/* Previous button */}
+              <button
+                onClick={goToPrev}
+                disabled={currentSentenceIdx === 0}
+                className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Previous sentence (K)"
+              >
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Play/Pause button */}
+              <button
+                onClick={() => isPlaying ? pause() : playCurrentSentence()}
+                className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                title="Play/Pause (Space)"
+              >
+                {isPlaying ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Next button */}
+              <button
+                onClick={goToNext}
+                disabled={currentSentenceIdx === lesson.sentences.length - 1}
+                className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Next sentence (J)"
+              >
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
+
+            {/* Continuous play toggle */}
+            <button
+              onClick={() => setContinuousPlay(!continuousPlay)}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors min-w-[100px] justify-end ${
+                continuousPlay
+                  ? 'text-blue-600'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title="Auto-play next sentence"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              <span>{continuousPlay ? 'Auto' : 'Auto'}</span>
+            </button>
           </div>
         </div>
       </div>
