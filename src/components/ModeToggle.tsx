@@ -10,30 +10,33 @@ interface ModeToggleProps {
 }
 
 export function ModeToggle({ mode, onChange }: ModeToggleProps) {
+  const toggle = () => onChange(mode === 'A' ? 'B' : 'A');
+
   return (
-    <div className="inline-flex rounded-md bg-gray-100 p-0.5">
-      <button
-        onClick={() => onChange('A')}
+    <button
+      onClick={toggle}
+      className="inline-flex rounded-md bg-gray-100 p-0.5 cursor-pointer"
+    >
+      <span
         className={cn(
           'px-2 py-0.5 rounded text-xs font-medium transition-colors',
           mode === 'A'
             ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
+            : 'text-gray-500'
         )}
       >
         All
-      </button>
-      <button
-        onClick={() => onChange('B')}
+      </span>
+      <span
         className={cn(
           'px-2 py-0.5 rounded text-xs font-medium transition-colors',
           mode === 'B'
             ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
+            : 'text-gray-500'
         )}
       >
         Hidden
-      </button>
-    </div>
+      </span>
+    </button>
   );
 }
