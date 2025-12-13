@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { SentenceRow } from './SentenceRow';
+import { DownloadIndicator } from './DownloadIndicator';
 import type { PlayMode } from './ModeToggle';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useAudioCache } from '@/hooks/useAudioCache';
 
 interface Sentence {
   id: string;
@@ -34,10 +36,28 @@ interface PlayerProps {
 export function Player({ lesson, mode }: PlayerProps) {
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [revealedSentences, setRevealedSentences] = useState<Set<number>>(new Set());
+  const [lastPlayedUrl, setLastPlayedUrl] = useState<string | null>(null);
 
   const { isPlaying, playClip, pause, setPlaybackRate, playbackRate } = useAudioPlayer();
 
   const currentSentence = lesson.sentences[currentSentenceIdx];
+
+  // Generate clip URLs for caching
+  const clipUrls = useMemo(
+    () => lesson.sentences.map((s) => `/api/media/sentences/${s.id}/clip`),
+    [lesson.sentences]
+  );
+
+  const { cached, total, isDownloading, isAllCached, cacheAudio, cacheAllAudio } =
+    useAudioCache(clipUrls);
+
+  // Auto-cache after playing a clip
+  useEffect(() => {
+    if (lastPlayedUrl && !isPlaying) {
+      cacheAudio(lastPlayedUrl);
+      setLastPlayedUrl(null);
+    }
+  }, [isPlaying, lastPlayedUrl, cacheAudio]);
 
   // Navigation handlers
   const goToNext = useCallback(() => {
@@ -75,7 +95,9 @@ export function Player({ lesson, mode }: PlayerProps) {
 
   const playCurrentSentence = useCallback(() => {
     if (currentSentence?.id) {
-      playClip(`/api/media/sentences/${currentSentence.id}/clip`);
+      const url = `/api/media/sentences/${currentSentence.id}/clip`;
+      playClip(url);
+      setLastPlayedUrl(url);
     }
   }, [currentSentence, playClip]);
 
@@ -83,7 +105,9 @@ export function Player({ lesson, mode }: PlayerProps) {
     (sentence: Sentence, idx: number) => {
       setCurrentSentenceIdx(idx);
       if (sentence.id) {
-        playClip(`/api/media/sentences/${sentence.id}/clip`);
+        const url = `/api/media/sentences/${sentence.id}/clip`;
+        playClip(url);
+        setLastPlayedUrl(url);
       }
     },
     [playClip]
@@ -133,6 +157,14 @@ export function Player({ lesson, mode }: PlayerProps) {
                 {allRevealed ? 'Hide all' : 'Reveal all'}
               </button>
             )}
+            {/* Download indicator */}
+            <DownloadIndicator
+              cached={cached}
+              total={total}
+              isDownloading={isDownloading}
+              isAllCached={isAllCached}
+              onDownloadAll={cacheAllAudio}
+            />
             {/* Playback speed */}
             <select
               value={playbackRate}
