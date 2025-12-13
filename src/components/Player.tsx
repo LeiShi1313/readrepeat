@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { SentenceRow } from './SentenceRow';
-import { ModeToggle, type PlayMode } from './ModeToggle';
+import type { PlayMode } from './ModeToggle';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
@@ -28,10 +28,10 @@ interface Lesson {
 
 interface PlayerProps {
   lesson: Lesson;
+  mode: PlayMode;
 }
 
-export function Player({ lesson }: PlayerProps) {
-  const [mode, setMode] = useState<PlayMode>('A');
+export function Player({ lesson, mode }: PlayerProps) {
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [revealedSentences, setRevealedSentences] = useState<Set<number>>(new Set());
 
@@ -124,11 +124,20 @@ export function Player({ lesson }: PlayerProps) {
             {lesson.title}
           </h1>
           <div className="flex items-center gap-3">
+            {/* Mode B: Reveal all/Hide all controls */}
+            {mode === 'B' && (
+              <button
+                onClick={allRevealed ? hideAll : revealAll}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                {allRevealed ? 'Hide all' : 'Reveal all'}
+              </button>
+            )}
             {/* Playback speed */}
             <select
               value={playbackRate}
               onChange={(e) => setPlaybackRate(Number(e.target.value))}
-              className="text-sm border border-gray-200 rounded-md px-2 py-1 bg-white"
+              className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white"
             >
               <option value={0.5}>0.5x</option>
               <option value={0.75}>0.75x</option>
@@ -136,22 +145,8 @@ export function Player({ lesson }: PlayerProps) {
               <option value={1.25}>1.25x</option>
               <option value={1.5}>1.5x</option>
             </select>
-
-            <ModeToggle mode={mode} onChange={setMode} />
           </div>
         </div>
-
-        {/* Mode B: Reveal all/Hide all controls */}
-        {mode === 'B' && (
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={allRevealed ? hideAll : revealAll}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              {allRevealed ? 'Hide all' : 'Reveal all'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Sentence list */}
