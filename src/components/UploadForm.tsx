@@ -18,6 +18,7 @@ export function UploadForm() {
   const [translationText, setTranslationText] = useState('');
   const [foreignLang, setForeignLang] = useState('en');
   const [translationLang, setTranslationLang] = useState('zh');
+  const [whisperModel, setWhisperModel] = useState('base');
 
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +35,7 @@ export function UploadForm() {
           translationText,
           foreignLang,
           translationLang,
+          whisperModel,
         }),
       });
 
@@ -243,6 +245,26 @@ export function UploadForm() {
             <option value="de">German</option>
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Whisper Model
+        </label>
+        <select
+          value={whisperModel}
+          onChange={(e) => setWhisperModel(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+        >
+          <option value="tiny">Tiny (39MB) - Fastest, lower accuracy</option>
+          <option value="base">Base (74MB) - Fast, good accuracy</option>
+          <option value="small">Small (244MB) - Balanced</option>
+          <option value="medium">Medium (769MB) - Slower, high accuracy</option>
+          <option value="large-v3">Large-v3 (3GB) - Slowest, highest accuracy</option>
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          Larger models are more accurate but slower to process
+        </p>
       </div>
 
       <div>

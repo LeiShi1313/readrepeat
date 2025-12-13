@@ -11,6 +11,7 @@ interface Lesson {
   translationTextRaw: string;
   foreignLang: string;
   translationLang: string;
+  whisperModel: string;
   status: string;
   errorMessage: string | null;
   audioOriginalPath: string | null;

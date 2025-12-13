@@ -100,6 +100,7 @@ def process_job(job: Dict[str, Any]):
             audio_path=lesson['audioOriginalPath'],
             foreign_lang=lesson.get('foreignLang', 'en'),
             translation_lang=lesson.get('translationLang', 'zh'),
+            whisper_model=lesson.get('whisperModel', 'base'),
         )
         complete_job(job_id, sentences)
     except Exception as e:

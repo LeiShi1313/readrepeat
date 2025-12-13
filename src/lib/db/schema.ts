@@ -21,6 +21,17 @@ export const JOB_STATUS = {
 
 export type JobStatus = (typeof JOB_STATUS)[keyof typeof JOB_STATUS];
 
+// Whisper model options
+export const WHISPER_MODELS = {
+  TINY: 'tiny',
+  BASE: 'base',
+  SMALL: 'small',
+  MEDIUM: 'medium',
+  LARGE_V3: 'large-v3',
+} as const;
+
+export type WhisperModel = (typeof WHISPER_MODELS)[keyof typeof WHISPER_MODELS];
+
 // Lessons table
 export const lessons = sqliteTable('lessons', {
   id: text('id').primaryKey(),
@@ -29,6 +40,7 @@ export const lessons = sqliteTable('lessons', {
   translationTextRaw: text('translation_text_raw').notNull(),
   foreignLang: text('foreign_lang').notNull().default('en'),
   translationLang: text('translation_lang').notNull().default('zh'),
+  whisperModel: text('whisper_model').notNull().default(WHISPER_MODELS.BASE),
   status: text('status').notNull().default(LESSON_STATUS.UPLOADED),
   errorMessage: text('error_message'),
   audioOriginalPath: text('audio_original_path'),

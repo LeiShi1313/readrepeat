@@ -1,0 +1,1 @@
+ALTER TABLE `lessons` ADD `whisper_model` text DEFAULT 'base' NOT NULL;

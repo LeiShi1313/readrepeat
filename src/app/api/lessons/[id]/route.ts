@@ -60,12 +60,14 @@ export async function PATCH(
     }
 
     // Extract updatable fields
-    const { title, foreignText, translationText, foreignLang, translationLang } = body;
+    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel } = body;
 
-    // Check if text content changed (triggers reprocessing)
+    // Check if content changed that requires reprocessing
     const textChanged =
       (foreignText !== undefined && foreignText !== lesson.foreignTextRaw) ||
       (translationText !== undefined && translationText !== lesson.translationTextRaw);
+    const modelChanged = whisperModel !== undefined && whisperModel !== lesson.whisperModel;
+    const needsReprocessing = textChanged || modelChanged;
 
     // Build update object
     const updates: Record<string, unknown> = {
@@ -77,11 +79,12 @@ export async function PATCH(
     if (translationText !== undefined) updates.translationTextRaw = translationText;
     if (foreignLang !== undefined) updates.foreignLang = foreignLang;
     if (translationLang !== undefined) updates.translationLang = translationLang;
+    if (whisperModel !== undefined) updates.whisperModel = whisperModel;
 
     let jobId: string | null = null;
 
-    // If text changed and audio exists, trigger reprocessing
-    if (textChanged && lesson.audioOriginalPath) {
+    // If text or model changed and audio exists, trigger reprocessing
+    if (needsReprocessing && lesson.audioOriginalPath) {
       updates.status = schema.LESSON_STATUS.PROCESSING;
       updates.errorMessage = null;
 
@@ -106,7 +109,7 @@ export async function PATCH(
 
     return NextResponse.json({
       message: 'Lesson updated',
-      reprocessing: textChanged && !!lesson.audioOriginalPath,
+      reprocessing: needsReprocessing && !!lesson.audioOriginalPath,
       jobId,
     });
   } catch (error) {

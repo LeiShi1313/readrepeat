@@ -8,23 +8,23 @@ from typing import List, Dict, Any, Optional
 import logging
 logger = logging.getLogger(__name__)
 
-# Model cache
-_model = None
+# Model cache - stores models by size to allow switching
+_models: Dict[str, Any] = {}
 
 # Device configuration from environment
 DEVICE = os.environ.get('WHISPER_DEVICE', 'cpu')  # 'cpu', 'cuda', or 'auto'
 COMPUTE_TYPE = os.environ.get('WHISPER_COMPUTE_TYPE', 'int8')  # 'int8', 'float16', 'float32'
-MODEL_SIZE = os.environ.get('WHISPER_MODEL', 'base')  # 'tiny', 'base', 'small', 'medium', 'large-v3'
+DEFAULT_MODEL_SIZE = os.environ.get('WHISPER_MODEL', 'base')  # 'tiny', 'base', 'small', 'medium', 'large-v3'
 
 
 def get_model(model_size: str = None):
-    """Get or create Whisper model (cached)"""
-    global _model
+    """Get or create Whisper model (cached per model size)"""
+    global _models
 
     if model_size is None:
-        model_size = MODEL_SIZE
+        model_size = DEFAULT_MODEL_SIZE
 
-    if _model is None:
+    if model_size not in _models:
         from faster_whisper import WhisperModel
 
         device = DEVICE
@@ -49,13 +49,13 @@ def get_model(model_size: str = None):
 
         logger.info(f'Loading Whisper model: {model_size} (device={device}, compute_type={compute_type})')
 
-        _model = WhisperModel(
+        _models[model_size] = WhisperModel(
             model_size,
             device=device,
             compute_type=compute_type
         )
 
-    return _model
+    return _models[model_size]
 
 
 def transcribe_audio(

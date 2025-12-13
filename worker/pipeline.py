@@ -22,6 +22,7 @@ def process_lesson(
     audio_path: str,
     foreign_lang: str = 'en',
     translation_lang: str = 'zh',
+    whisper_model: str = 'base',
 ) -> List[Dict[str, Any]]:
     """
     Process a lesson: segment, transcribe, align, slice
@@ -48,8 +49,8 @@ def process_lesson(
     normalize_audio(audio_path, normalized_path)
 
     # 3. Transcribe with word-level timestamps
-    logger.info('Step 3: Transcribing audio')
-    transcript_words = transcribe_audio(normalized_path, foreign_lang)
+    logger.info(f'Step 3: Transcribing audio (model: {whisper_model})')
+    transcript_words = transcribe_audio(normalized_path, foreign_lang, whisper_model)
 
     logger.info(f'Transcribed {len(transcript_words)} words')
 

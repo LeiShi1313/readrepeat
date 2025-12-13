@@ -11,6 +11,7 @@ interface Lesson {
   translationTextRaw: string;
   foreignLang: string;
   translationLang: string;
+  whisperModel: string;
 }
 
 interface EditLessonFormProps {
@@ -30,13 +31,15 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const [translationText, setTranslationText] = useState(lesson.translationTextRaw);
   const [foreignLang, setForeignLang] = useState(lesson.foreignLang);
   const [translationLang, setTranslationLang] = useState(lesson.translationLang);
+  const [whisperModel, setWhisperModel] = useState(lesson.whisperModel);
 
-  const hasTextChanges =
+  const hasChanges =
     foreignText !== lesson.foreignTextRaw ||
     translationText !== lesson.translationTextRaw ||
     title !== (lesson.title || '') ||
     foreignLang !== lesson.foreignLang ||
-    translationLang !== lesson.translationLang;
+    translationLang !== lesson.translationLang ||
+    whisperModel !== lesson.whisperModel;
 
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +56,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           translationText,
           foreignLang,
           translationLang,
+          whisperModel,
         }),
       });
 
@@ -213,6 +217,27 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
+            Whisper Model
+          </label>
+          <select
+            value={whisperModel}
+            onChange={(e) => setWhisperModel(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            disabled={isLoading}
+          >
+            <option value="tiny">Tiny (39MB) - Fastest, lower accuracy</option>
+            <option value="base">Base (74MB) - Fast, good accuracy</option>
+            <option value="small">Small (244MB) - Balanced</option>
+            <option value="medium">Medium (769MB) - Slower, high accuracy</option>
+            <option value="large-v3">Large-v3 (3GB) - Slowest, highest accuracy</option>
+          </select>
+          <p className="text-xs text-gray-400 mt-1">
+            Changing the model will trigger re-processing
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Foreign Text <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -244,10 +269,10 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
 
         <button
           type="submit"
-          disabled={isLoading || !foreignText || !translationText || !hasTextChanges}
+          disabled={isLoading || !foreignText || !translationText || !hasChanges}
           className={cn(
             'w-full py-3 px-4 rounded-lg font-medium transition-colors',
-            isLoading || !foreignText || !translationText || !hasTextChanges
+            isLoading || !foreignText || !translationText || !hasChanges
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-500 text-white hover:bg-blue-600'
           )}
