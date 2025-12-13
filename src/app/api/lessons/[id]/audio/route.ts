@@ -43,12 +43,16 @@ export async function POST(
     const buffer = Buffer.from(bytes);
     await writeFile(audioPath, buffer);
 
+    // Delete existing sentences (for re-upload case)
+    await db.delete(schema.sentences).where(eq(schema.sentences.lessonId, lessonId));
+
     // Update lesson with audio path and create processing job
     await db
       .update(schema.lessons)
       .set({
         audioOriginalPath: audioPath,
         status: schema.LESSON_STATUS.PROCESSING,
+        errorMessage: null,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(schema.lessons.id, lessonId));

@@ -33,7 +33,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Create non-root user
+# Create non-root user with UID 1001 (shared between web and worker containers)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 

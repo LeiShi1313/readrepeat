@@ -1,7 +1,8 @@
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { Player } from '@/components/Player';
 import { ProcessingStatus } from '@/components/ProcessingStatus';
+import { LessonPageContent } from '@/components/LessonPageContent';
+import { FailedView } from '@/components/FailedView';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -43,61 +44,7 @@ export default async function LessonPage({ params }: Props) {
   }
 
   // READY status
-  return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-white border-b sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link
-            href="/"
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <span className="text-sm text-gray-500">Back to lessons</span>
-        </div>
-      </header>
-
-      <main className="pt-4">
-        <Player lesson={{ ...lesson, sentences }} />
-      </main>
-    </div>
-  );
-}
-
-function FailedView({ lesson }: { lesson: typeof schema.lessons.$inferSelect }) {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto p-8">
-        <div className="mb-6">
-          <svg className="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-semibold mb-2">Processing Failed</h2>
-        <p className="text-gray-600 mb-4">
-          {lesson.errorMessage || 'An error occurred while processing the audio.'}
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Link
-            href="/"
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Back to Home
-          </Link>
-          <form action={`/api/lessons/${lesson.id}/reprocess`} method="POST">
-            <button
-              type="submit"
-              className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Try Again
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+  return <LessonPageContent lesson={lesson} sentences={sentences} />;
 }
 
 function UploadedView({ lesson }: { lesson: typeof schema.lessons.$inferSelect }) {

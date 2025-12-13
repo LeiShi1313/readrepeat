@@ -31,8 +31,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 # Copy worker code
 COPY . .
 
-# Create non-root user (but need to be in render/video group for GPU access)
-RUN useradd --create-home --shell /bin/bash worker && \
+# Create non-root user with UID 1001 (matches web container)
+# Also need to be in render/video group for GPU access
+RUN useradd --create-home --shell /bin/bash --uid 1001 worker && \
     usermod -aG video,render worker && \
     chown -R worker:worker /app
 

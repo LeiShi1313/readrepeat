@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy worker code
 COPY . .
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash worker && \
+# Create non-root user with UID 1001 (matches web container)
+RUN useradd --create-home --shell /bin/bash --uid 1001 worker && \
     chown -R worker:worker /app
 
 USER worker

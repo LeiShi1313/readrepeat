@@ -13,14 +13,13 @@ services:
       - NODE_ENV=production
     volumes:
       - ./data:/app/data
-    depends_on:
-      - worker
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/lessons"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/lessons').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
       retries: 3
+      start_period: 10s
 
   # Python Worker - CPU only
   worker:
