@@ -2,7 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAtom } from 'jotai';
 import { cn } from '@/lib/utils';
+import { foreignLangAtom, translationLangAtom, whisperModelAtom } from '@/lib/atoms';
 
 export function UploadForm() {
   const router = useRouter();
@@ -16,9 +18,9 @@ export function UploadForm() {
   const [title, setTitle] = useState('');
   const [foreignText, setForeignText] = useState('');
   const [translationText, setTranslationText] = useState('');
-  const [foreignLang, setForeignLang] = useState('en');
-  const [translationLang, setTranslationLang] = useState('zh');
-  const [whisperModel, setWhisperModel] = useState('base');
+  const [foreignLang, setForeignLang] = useAtom(foreignLangAtom);
+  const [translationLang, setTranslationLang] = useAtom(translationLangAtom);
+  const [whisperModel, setWhisperModel] = useAtom(whisperModelAtom);
 
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
