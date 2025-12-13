@@ -15,24 +15,28 @@ export function ModeToggle({ mode, onChange }: ModeToggleProps) {
   return (
     <button
       onClick={toggle}
-      className="inline-flex rounded-md bg-gray-100 p-0.5 cursor-pointer"
+      className="relative inline-flex rounded-md bg-gray-100 p-0.5 cursor-pointer"
     >
+      {/* Sliding background */}
       <span
         className={cn(
-          'px-2 py-0.5 rounded text-xs font-medium transition-colors',
-          mode === 'A'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500'
+          'absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] bg-white rounded shadow-sm transition-all duration-200 ease-out',
+          mode === 'A' ? 'left-0.5' : 'left-[calc(50%+1px)]'
+        )}
+      />
+      {/* Labels */}
+      <span
+        className={cn(
+          'relative z-10 px-2 py-0.5 rounded text-xs font-medium transition-colors duration-200',
+          mode === 'A' ? 'text-gray-900' : 'text-gray-500'
         )}
       >
         All
       </span>
       <span
         className={cn(
-          'px-2 py-0.5 rounded text-xs font-medium transition-colors',
-          mode === 'B'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500'
+          'relative z-10 px-2 py-0.5 rounded text-xs font-medium transition-colors duration-200',
+          mode === 'B' ? 'text-gray-900' : 'text-gray-500'
         )}
       >
         Hidden
