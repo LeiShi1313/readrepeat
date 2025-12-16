@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 
@@ -27,6 +27,10 @@ interface WaveformEditorProps {
   onSentenceSelect: (id: string | null) => void;
 }
 
+export interface WaveformEditorHandle {
+  playSegment: (segmentId: string) => void;
+}
+
 // Colors for regions
 const REGION_COLORS = [
   'rgba(59, 130, 246, 0.3)',   // blue
@@ -39,13 +43,13 @@ const REGION_COLORS = [
 
 const SELECTED_COLOR = 'rgba(59, 130, 246, 0.5)';
 
-export function WaveformEditor({
+export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorProps>(function WaveformEditor({
   lessonId,
   sentences,
   onTimingsChange,
   selectedSentenceId,
   onSentenceSelect,
-}: WaveformEditorProps) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
@@ -54,6 +58,8 @@ export function WaveformEditor({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [zoom, setZoom] = useState(50);
+  const stopListenerRef = useRef<(() => void) | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   // Initialize WaveSurfer
   useEffect(() => {
@@ -77,8 +83,8 @@ export function WaveformEditor({
 
     wavesurferRef.current = wavesurfer;
 
-    // Load audio
-    wavesurfer.load(`/api/media/lessons/${lessonId}/original`);
+    // Load normalized audio (same as what timestamps were calculated from)
+    wavesurfer.load(`/api/media/lessons/${lessonId}/normalized`);
 
     // Event handlers
     wavesurfer.on('ready', () => {
@@ -119,10 +125,47 @@ export function WaveformEditor({
     regions.on('region-clicked', (region, e) => {
       e.stopPropagation();
       onSentenceSelect(region.id);
-      region.play();
+
+      // Cancel any existing RAF loop
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+
+      // Get current region boundaries
+      const startTime = region.start;
+      const endTime = region.end;
+
+      // Play from region start
+      wavesurfer.setTime(startTime);
+      wavesurfer.play();
+
+      // Use requestAnimationFrame for precise stop timing
+      const checkTime = () => {
+        if (!wavesurfer.isPlaying()) {
+          rafRef.current = null;
+          return;
+        }
+
+        const currentTime = wavesurfer.getCurrentTime();
+        if (currentTime >= endTime) {
+          wavesurfer.pause();
+          wavesurfer.setTime(endTime);
+          rafRef.current = null;
+          return;
+        }
+
+        rafRef.current = requestAnimationFrame(checkTime);
+      };
+
+      rafRef.current = requestAnimationFrame(checkTime);
     });
 
     return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       wavesurfer.destroy();
     };
   }, [lessonId, sentences, onTimingsChange, onSentenceSelect]);
@@ -147,6 +190,68 @@ export function WaveformEditor({
     }
   }, [zoom, isReady]);
 
+  // Helper function to play a region by ID with precise timing using requestAnimationFrame
+  const playRegionById = useCallback((regionId: string) => {
+    if (!regionsRef.current || !wavesurferRef.current) return;
+
+    const regions = regionsRef.current.getRegions();
+    const region = regions.find((r) => r.id === regionId);
+    if (!region) return;
+
+    const wavesurfer = wavesurferRef.current;
+
+    // Cancel any existing RAF loop
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    // Remove any existing stop listener
+    if (stopListenerRef.current) {
+      stopListenerRef.current();
+      stopListenerRef.current = null;
+    }
+
+    // Get current region boundaries (they may have been modified)
+    const startTime = region.start;
+    const endTime = region.end;
+
+    // Play from region's current start
+    wavesurfer.setTime(startTime);
+    wavesurfer.play();
+
+    // Use requestAnimationFrame for precise stop timing (~60fps instead of ~4fps)
+    const checkTime = () => {
+      if (!wavesurfer.isPlaying()) {
+        rafRef.current = null;
+        return;
+      }
+
+      const currentTime = wavesurfer.getCurrentTime();
+      if (currentTime >= endTime) {
+        wavesurfer.pause();
+        wavesurfer.setTime(endTime); // Set exactly to end for visual consistency
+        rafRef.current = null;
+        return;
+      }
+
+      rafRef.current = requestAnimationFrame(checkTime);
+    };
+
+    rafRef.current = requestAnimationFrame(checkTime);
+    stopListenerRef.current = () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, []);
+
+  // Expose playSegment function via ref
+  useImperativeHandle(ref, () => ({
+    playSegment: playRegionById,
+  }), [playRegionById]);
+
   const handlePlayPause = useCallback(() => {
     if (wavesurferRef.current) {
       wavesurferRef.current.playPause();
@@ -154,14 +259,10 @@ export function WaveformEditor({
   }, []);
 
   const handlePlaySelected = useCallback(() => {
-    if (!regionsRef.current || !selectedSentenceId) return;
-
-    const regions = regionsRef.current.getRegions();
-    const selectedRegion = regions.find((r) => r.id === selectedSentenceId);
-    if (selectedRegion) {
-      selectedRegion.play();
+    if (selectedSentenceId) {
+      playRegionById(selectedSentenceId);
     }
-  }, [selectedSentenceId]);
+  }, [selectedSentenceId, playRegionById]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -253,4 +354,4 @@ export function WaveformEditor({
       </div>
     </div>
   );
-}
+});

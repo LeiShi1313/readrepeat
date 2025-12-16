@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { WaveformEditor } from './WaveformEditor';
+import { WaveformEditor, WaveformEditorHandle } from './WaveformEditor';
 
 interface Sentence {
   id: string;
@@ -34,6 +34,7 @@ interface FineTuneEditorProps {
 
 export function FineTuneEditor({ lesson, sentences }: FineTuneEditorProps) {
   const router = useRouter();
+  const waveformRef = useRef<WaveformEditorHandle>(null);
   const [selectedSentenceId, setSelectedSentenceId] = useState<string | null>(null);
   const [modifiedTimings, setModifiedTimings] = useState<Map<string, Timing>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +79,11 @@ export function FineTuneEditor({ lesson, sentences }: FineTuneEditorProps) {
       timings.forEach((t) => next.set(t.sentenceId, t));
       return next;
     });
+  }, []);
+
+  const handleSentenceClick = useCallback((sentenceId: string) => {
+    setSelectedSentenceId(sentenceId);
+    waveformRef.current?.playSegment(sentenceId);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -193,6 +199,7 @@ export function FineTuneEditor({ lesson, sentences }: FineTuneEditorProps) {
           {/* Waveform editor - takes 2 columns */}
           <div className="lg:col-span-2">
             <WaveformEditor
+              ref={waveformRef}
               lessonId={lesson.id}
               sentences={sentences}
               onTimingsChange={handleTimingsChange}
@@ -220,7 +227,7 @@ export function FineTuneEditor({ lesson, sentences }: FineTuneEditorProps) {
                   return (
                     <button
                       key={sentence.id}
-                      onClick={() => setSelectedSentenceId(sentence.id)}
+                      onClick={() => handleSentenceClick(sentence.id)}
                       className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
                         isSelected ? 'bg-blue-50 border-l-2 border-blue-500' : ''
                       }`}
