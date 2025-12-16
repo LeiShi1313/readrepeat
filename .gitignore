@@ -48,3 +48,4 @@ venv/
 
 # data (SQLite DB and uploads)
 /data/
+transcripts/
