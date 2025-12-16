@@ -3,15 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
-
-interface Sentence {
-  id: string;
-  idx: number;
-  foreignText: string;
-  translationText: string;
-  startMs: number | null;
-  endMs: number | null;
-}
+import { WorkingSentence } from './FineTuneEditor';
 
 interface Timing {
   sentenceId: string;
@@ -21,14 +13,17 @@ interface Timing {
 
 interface WaveformEditorProps {
   lessonId: string;
-  sentences: Sentence[];
+  sentences: WorkingSentence[];
   onTimingsChange: (timings: Timing[]) => void;
   selectedSentenceId: string | null;
   onSentenceSelect: (id: string | null) => void;
+  splitMode?: { sentenceId: string; splitTimeMs: number | null } | null;
+  onSplitPointSelect?: (timeMs: number) => void;
 }
 
 export interface WaveformEditorHandle {
   playSegment: (segmentId: string) => void;
+  updateRegions: (sentences: WorkingSentence[]) => void;
 }
 
 // Colors for regions
@@ -42,6 +37,7 @@ const REGION_COLORS = [
 ];
 
 const SELECTED_COLOR = 'rgba(59, 130, 246, 0.5)';
+const SPLIT_TARGET_COLOR = 'rgba(249, 115, 22, 0.5)';
 
 export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorProps>(function WaveformEditor({
   lessonId,
@@ -49,10 +45,13 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
   onTimingsChange,
   selectedSentenceId,
   onSentenceSelect,
+  splitMode,
+  onSplitPointSelect,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
+  const splitLineRef = useRef<HTMLDivElement | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -60,6 +59,64 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
   const [zoom, setZoom] = useState(50);
   const stopListenerRef = useRef<(() => void) | null>(null);
   const rafRef = useRef<number | null>(null);
+  const sentencesRef = useRef<WorkingSentence[]>(sentences);
+  const selectedSentenceIdRef = useRef<string | null>(selectedSentenceId);
+  const splitModeRef = useRef(splitMode);
+  const onTimingsChangeRef = useRef(onTimingsChange);
+  const onSentenceSelectRef = useRef(onSentenceSelect);
+
+  // Keep refs up to date
+  useEffect(() => {
+    sentencesRef.current = sentences;
+  }, [sentences]);
+
+  useEffect(() => {
+    selectedSentenceIdRef.current = selectedSentenceId;
+  }, [selectedSentenceId]);
+
+  useEffect(() => {
+    splitModeRef.current = splitMode;
+  }, [splitMode]);
+
+  useEffect(() => {
+    onTimingsChangeRef.current = onTimingsChange;
+  }, [onTimingsChange]);
+
+  useEffect(() => {
+    onSentenceSelectRef.current = onSentenceSelect;
+  }, [onSentenceSelect]);
+
+  const onSplitPointSelectRef = useRef(onSplitPointSelect);
+  useEffect(() => {
+    onSplitPointSelectRef.current = onSplitPointSelect;
+  }, [onSplitPointSelect]);
+
+  // Create regions from sentences (uses refs to avoid recreating wavesurfer)
+  const createRegions = useCallback((regionsSentences: WorkingSentence[]) => {
+    if (!regionsRef.current) return;
+
+    const regions = regionsRef.current;
+    const currentSelectedId = selectedSentenceIdRef.current;
+    const currentSplitMode = splitModeRef.current;
+
+    // Clear existing regions
+    regions.getRegions().forEach((region) => region.remove());
+
+    // Create new regions
+    regionsSentences.forEach((sentence, idx) => {
+      const isSelected = sentence.id === currentSelectedId;
+      const isSplitTarget = currentSplitMode?.sentenceId === sentence.id;
+
+      regions.addRegion({
+        id: sentence.id,
+        start: sentence.startMs / 1000,
+        end: sentence.endMs / 1000,
+        color: isSplitTarget ? SPLIT_TARGET_COLOR : isSelected ? SELECTED_COLOR : REGION_COLORS[idx % REGION_COLORS.length],
+        drag: !currentSplitMode, // Disable drag in split mode
+        resize: !currentSplitMode, // Disable resize in split mode
+      });
+    });
+  }, []);
 
   // Initialize WaveSurfer
   useEffect(() => {
@@ -83,7 +140,7 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
 
     wavesurferRef.current = wavesurfer;
 
-    // Load normalized audio (same as what timestamps were calculated from)
+    // Load normalized audio
     wavesurfer.load(`/api/media/lessons/${lessonId}/normalized`);
 
     // Event handlers
@@ -91,19 +148,8 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       setIsReady(true);
       setDuration(wavesurfer.getDuration());
 
-      // Create regions for each sentence
-      sentences.forEach((sentence, idx) => {
-        if (sentence.startMs !== null && sentence.endMs !== null) {
-          regions.addRegion({
-            id: sentence.id,
-            start: sentence.startMs / 1000,
-            end: sentence.endMs / 1000,
-            color: REGION_COLORS[idx % REGION_COLORS.length],
-            drag: true,
-            resize: true,
-          });
-        }
-      });
+      // Create initial regions
+      createRegions(sentencesRef.current);
     });
 
     wavesurfer.on('play', () => setIsPlaying(true));
@@ -112,19 +158,42 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
 
     // Region events
     regions.on('region-updated', () => {
-      // Collect all current timings
       const allRegions = regions.getRegions();
       const timings: Timing[] = allRegions.map((region) => ({
         sentenceId: region.id,
         startMs: Math.round(region.start * 1000),
         endMs: Math.round(region.end * 1000),
       }));
-      onTimingsChange(timings);
+      onTimingsChangeRef.current(timings);
     });
 
     regions.on('region-clicked', (region, e) => {
       e.stopPropagation();
-      onSentenceSelect(region.id);
+
+      const currentSplitMode = splitModeRef.current;
+
+      // If in split mode and clicking the target region, set split point
+      if (currentSplitMode && currentSplitMode.sentenceId === region.id && onSplitPointSelectRef.current) {
+        // Get click position within the waveform
+        const wrapper = wavesurfer.getWrapper();
+        const rect = wrapper.getBoundingClientRect();
+        const clickX = (e as MouseEvent).clientX - rect.left + wrapper.scrollLeft;
+        const relativeX = clickX / wrapper.scrollWidth;
+        const clickedTime = relativeX * wavesurfer.getDuration();
+        const clickedTimeMs = Math.round(clickedTime * 1000);
+
+        // Clamp to region bounds with minimum 100ms from edges
+        const clampedTimeMs = Math.max(
+          Math.round(region.start * 1000) + 100,
+          Math.min(Math.round(region.end * 1000) - 100, clickedTimeMs)
+        );
+
+        onSplitPointSelectRef.current(clampedTimeMs);
+        return;
+      }
+
+      // Normal behavior: select and play
+      onSentenceSelectRef.current(region.id);
 
       // Cancel any existing RAF loop
       if (rafRef.current) {
@@ -168,20 +237,70 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       }
       wavesurfer.destroy();
     };
-  }, [lessonId, sentences, onTimingsChange, onSentenceSelect]);
+    // Note: createRegions is stable (no deps) so not included here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
 
-  // Update region colors when selection changes
+  // Update split line position
+  useEffect(() => {
+    if (!containerRef.current || !wavesurferRef.current || !isReady) return;
+
+    // Remove existing split line
+    if (splitLineRef.current) {
+      splitLineRef.current.remove();
+      splitLineRef.current = null;
+    }
+
+    // Create split line if in split mode with a selected point
+    if (splitMode?.splitTimeMs !== null && splitMode?.splitTimeMs !== undefined) {
+      const wavesurfer = wavesurferRef.current;
+      const duration = wavesurfer.getDuration();
+      const relativePosition = (splitMode.splitTimeMs / 1000) / duration;
+
+      const container = containerRef.current;
+      const waveformWidth = container.scrollWidth;
+      const leftPosition = relativePosition * waveformWidth;
+
+      const line = document.createElement('div');
+      line.className = 'absolute top-0 bottom-0 w-0.5 bg-orange-500 z-10 pointer-events-none';
+      line.style.left = `${leftPosition}px`;
+
+      // Add a label
+      const label = document.createElement('div');
+      label.className = 'absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-orange-500 text-white text-xs rounded whitespace-nowrap';
+      label.textContent = 'Split';
+      line.appendChild(label);
+
+      container.style.position = 'relative';
+      container.appendChild(line);
+      splitLineRef.current = line;
+    }
+
+    return () => {
+      if (splitLineRef.current) {
+        splitLineRef.current.remove();
+        splitLineRef.current = null;
+      }
+    };
+  }, [splitMode, isReady, zoom]);
+
+  // Update region colors when selection or split mode changes
   useEffect(() => {
     if (!regionsRef.current || !isReady) return;
 
     const regions = regionsRef.current.getRegions();
-    regions.forEach((region, idx) => {
+    regions.forEach((region) => {
+      const idx = sentencesRef.current.findIndex((s) => s.id === region.id);
       const isSelected = region.id === selectedSentenceId;
+      const isSplitTarget = splitMode?.sentenceId === region.id;
+
       region.setOptions({
-        color: isSelected ? SELECTED_COLOR : REGION_COLORS[idx % REGION_COLORS.length],
+        color: isSplitTarget ? SPLIT_TARGET_COLOR : isSelected ? SELECTED_COLOR : REGION_COLORS[idx % REGION_COLORS.length],
+        drag: !splitMode,
+        resize: !splitMode,
       });
     });
-  }, [selectedSentenceId, isReady]);
+  }, [selectedSentenceId, splitMode, isReady]);
 
   // Handle zoom changes
   useEffect(() => {
@@ -190,7 +309,7 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
     }
   }, [zoom, isReady]);
 
-  // Helper function to play a region by ID with precise timing using requestAnimationFrame
+  // Helper function to play a region by ID
   const playRegionById = useCallback((regionId: string) => {
     if (!regionsRef.current || !wavesurferRef.current) return;
 
@@ -212,15 +331,12 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       stopListenerRef.current = null;
     }
 
-    // Get current region boundaries (they may have been modified)
     const startTime = region.start;
     const endTime = region.end;
 
-    // Play from region's current start
     wavesurfer.setTime(startTime);
     wavesurfer.play();
 
-    // Use requestAnimationFrame for precise stop timing (~60fps instead of ~4fps)
     const checkTime = () => {
       if (!wavesurfer.isPlaying()) {
         rafRef.current = null;
@@ -230,7 +346,7 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       const currentTime = wavesurfer.getCurrentTime();
       if (currentTime >= endTime) {
         wavesurfer.pause();
-        wavesurfer.setTime(endTime); // Set exactly to end for visual consistency
+        wavesurfer.setTime(endTime);
         rafRef.current = null;
         return;
       }
@@ -247,10 +363,17 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
     };
   }, []);
 
-  // Expose playSegment function via ref
+  // Update regions (called after merge/split)
+  const updateRegions = useCallback((newSentences: WorkingSentence[]) => {
+    sentencesRef.current = newSentences;
+    createRegions(newSentences);
+  }, [createRegions]);
+
+  // Expose methods via ref
   useImperativeHandle(ref, () => ({
     playSegment: playRegionById,
-  }), [playRegionById]);
+    updateRegions,
+  }), [playRegionById, updateRegions]);
 
   const handlePlayPause = useCallback(() => {
     if (wavesurferRef.current) {
@@ -349,7 +472,9 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       {/* Instructions */}
       <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
         <p className="text-xs text-gray-500">
-          Drag region edges to adjust boundaries. Click a region to select and play it.
+          {splitMode
+            ? 'Click on the waveform within the highlighted region to set the split point.'
+            : 'Drag region edges to adjust boundaries. Click a region to select and play it.'}
         </p>
       </div>
     </div>
