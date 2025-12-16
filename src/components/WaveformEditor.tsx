@@ -235,7 +235,11 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      wavesurfer.destroy();
+      if (wavesurfer) {
+        wavesurfer.destroy();
+        wavesurferRef.current = null;
+        regionsRef.current = null;
+      }
     };
     // Note: createRegions is stable (no deps) so not included here
     // eslint-disable-next-line react-hooks/exhaustive-deps
