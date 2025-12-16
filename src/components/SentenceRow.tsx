@@ -49,7 +49,7 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
       onClick={onPlay}
     >
       {/* Translation text (always visible) */}
-      <div className="text-gray-500 text-sm mb-2 leading-relaxed">
+      <div className="text-slate-500 text-sm mb-2 leading-relaxed">
         {sentence.translationText}
       </div>
 
@@ -57,8 +57,8 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
       <div className="relative">
         <div
           className={cn(
-            'text-lg leading-relaxed transition-all duration-300',
-            !showForeign && 'blur-sm select-none',
+            'text-lg leading-relaxed transition-all duration-300 text-slate-800',
+            !showForeign && 'blur-sm select-none text-slate-400',
             isActive && isPlaying && 'text-blue-600'
           )}
         >
