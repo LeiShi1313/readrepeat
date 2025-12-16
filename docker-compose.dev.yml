@@ -1,0 +1,40 @@
+# Development version with hot reloading
+# Run with: docker compose -f docker-compose.dev.yml up --build
+
+services:
+  # Next.js Web Application - Development mode with hot reload
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Python Worker - with auto-reload on file changes
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.dev
+    environment:
+      - API_BASE_URL=http://web:3000
+      - POLL_INTERVAL=5
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+      - WHISPER_MODEL=base
+    volumes:
+      - ./worker:/app
+      - ./data:/app/data
+    restart: unless-stopped
+    depends_on:
+      - web
+
+volumes:
+  data:
