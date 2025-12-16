@@ -172,8 +172,8 @@ def find_best_window(
     return {
         'start_idx': best_start,
         'end_idx': best_end,
-        'start_ms': int(transcript_words[best_start]['start'] * 1000),
-        'end_ms': int(transcript_words[best_end]['end'] * 1000),
+        'start_ms': round(transcript_words[best_start]['start'] * 1000),
+        'end_ms': round(transcript_words[best_end]['end'] * 1000),
         'confidence': best_score,
     }
 

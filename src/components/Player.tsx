@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { SentenceRow } from './SentenceRow';
 import { DownloadIndicator } from './DownloadIndicator';
 import type { PlayMode } from './ModeToggle';
@@ -39,6 +39,8 @@ export function Player({ lesson, mode }: PlayerProps) {
   const [lastPlayedUrl, setLastPlayedUrl] = useState<string | null>(null);
   const [continuousPlay, setContinuousPlay] = useState(false);
   const [wasPlaying, setWasPlaying] = useState(false);
+
+  const activeSentenceRef = useRef<HTMLDivElement>(null);
 
   const { isPlaying, playClip, pause, setPlaybackRate, playbackRate } = useAudioPlayer();
 
@@ -85,6 +87,16 @@ export function Player({ lesson, mode }: PlayerProps) {
       }
     }
   }, [isPlaying, wasPlaying, continuousPlay, currentSentenceIdx, lesson.sentences, playClip]);
+
+  // Auto-scroll to center the active sentence when continuous play is enabled
+  useEffect(() => {
+    if (continuousPlay && activeSentenceRef.current) {
+      activeSentenceRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [continuousPlay, currentSentenceIdx]);
 
   // Navigation handlers
   const goToNext = useCallback(() => {
@@ -219,6 +231,7 @@ export function Player({ lesson, mode }: PlayerProps) {
         {lesson.sentences.map((sentence, idx) => (
           <SentenceRow
             key={sentence.id}
+            ref={idx === currentSentenceIdx ? activeSentenceRef : null}
             sentence={sentence}
             isActive={idx === currentSentenceIdx}
             isPlaying={idx === currentSentenceIdx && isPlaying}

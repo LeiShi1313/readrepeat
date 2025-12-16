@@ -1,5 +1,6 @@
 'use client';
 
+import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { PlayMode } from './ModeToggle';
 
@@ -24,7 +25,7 @@ interface SentenceRowProps {
   onReveal: () => void;
 }
 
-export function SentenceRow({
+export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function SentenceRow({
   sentence,
   isActive,
   isPlaying,
@@ -32,12 +33,13 @@ export function SentenceRow({
   mode,
   onPlay,
   onReveal,
-}: SentenceRowProps) {
+}, ref) {
   const showForeign = mode === 'A' || isRevealed;
   const hasLowConfidence = sentence.confidence !== null && sentence.confidence < 0.5;
 
   return (
     <div
+      ref={ref}
       className={cn(
         'p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer',
         isActive
@@ -120,4 +122,4 @@ export function SentenceRow({
       </div>
     </div>
   );
-}
+});
