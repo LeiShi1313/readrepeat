@@ -12,6 +12,7 @@ import requests
 from typing import Optional, Dict, Any
 
 from pipeline import process_lesson
+from reslice import reslice_lesson
 
 # Configuration
 API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:3000')
@@ -76,6 +77,25 @@ def fail_job(job_id: str, error_message: str):
         logger.error(f'Error failing job {job_id}: {e}')
 
 
+def complete_reslice_job(job_id: str, updated_sentences: list):
+    """Mark reslice job as completed with updated clip paths"""
+    try:
+        response = requests.post(
+            f'{API_BASE_URL}/api/jobs/poll',
+            json={
+                'jobId': job_id,
+                'status': 'COMPLETED',
+                'jobType': 'RESLICE_AUDIO',
+                'updatedSentences': updated_sentences,
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        logger.info(f'Reslice job {job_id} completed successfully')
+    except Exception as e:
+        logger.error(f'Error completing reslice job {job_id}: {e}')
+
+
 def process_job(job: Dict[str, Any]):
     """Process a single job"""
     job_id = job['id']
@@ -84,28 +104,49 @@ def process_job(job: Dict[str, Any]):
 
     logger.info(f'Processing job {job_id} (type: {job_type})')
 
-    if job_type != 'PROCESS_LESSON':
-        fail_job(job_id, f'Unknown job type: {job_type}')
-        return
-
     if not lesson:
         fail_job(job_id, 'No lesson data in job')
         return
 
-    try:
-        sentences = process_lesson(
-            lesson_id=lesson['id'],
-            foreign_text=lesson['foreignTextRaw'],
-            translation_text=lesson['translationTextRaw'],
-            audio_path=lesson['audioOriginalPath'],
-            foreign_lang=lesson.get('foreignLang', 'en'),
-            translation_lang=lesson.get('translationLang', 'zh'),
-            whisper_model=lesson.get('whisperModel', 'base'),
-        )
-        complete_job(job_id, sentences)
-    except Exception as e:
-        logger.exception(f'Error processing lesson {lesson["id"]}')
-        fail_job(job_id, str(e))
+    if job_type == 'PROCESS_LESSON':
+        try:
+            sentences = process_lesson(
+                lesson_id=lesson['id'],
+                foreign_text=lesson['foreignTextRaw'],
+                translation_text=lesson['translationTextRaw'],
+                audio_path=lesson['audioOriginalPath'],
+                foreign_lang=lesson.get('foreignLang', 'en'),
+                translation_lang=lesson.get('translationLang', 'zh'),
+                whisper_model=lesson.get('whisperModel', 'base'),
+            )
+            complete_job(job_id, sentences)
+        except Exception as e:
+            logger.exception(f'Error processing lesson {lesson["id"]}')
+            fail_job(job_id, str(e))
+
+    elif job_type == 'RESLICE_AUDIO':
+        sentences = job.get('sentences', [])
+        if not sentences:
+            fail_job(job_id, 'No sentence data for reslice job')
+            return
+
+        try:
+            # Get output directory from audio path
+            output_dir = os.path.dirname(lesson['audioOriginalPath'])
+
+            updated_sentences = reslice_lesson(
+                lesson_id=lesson['id'],
+                audio_path=lesson['audioOriginalPath'],
+                sentences=sentences,
+                output_dir=output_dir,
+            )
+            complete_reslice_job(job_id, updated_sentences)
+        except Exception as e:
+            logger.exception(f'Error re-slicing lesson {lesson["id"]}')
+            fail_job(job_id, str(e))
+
+    else:
+        fail_job(job_id, f'Unknown job type: {job_type}')
 
 
 def main():

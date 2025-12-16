@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 interface Lesson {
@@ -32,8 +33,15 @@ const STATUS_LABELS = {
 };
 
 export function LessonCard({ lesson }: LessonCardProps) {
+  const router = useRouter();
   const statusStyle = STATUS_STYLES[lesson.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.UPLOADED;
   const statusLabel = STATUS_LABELS[lesson.status as keyof typeof STATUS_LABELS] || lesson.status;
+
+  const handleFineTuneClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/lesson/${lesson.id}/fine-tune`);
+  };
 
   return (
     <Link
@@ -55,9 +63,20 @@ export function LessonCard({ lesson }: LessonCardProps) {
             </span>
           </div>
         </div>
-        <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusStyle)}>
-          {statusLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          {lesson.status === 'READY' && (
+            <button
+              onClick={handleFineTuneClick}
+              className="text-xs px-2 py-1 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              title="Fine-tune audio segments"
+            >
+              Fine-tune
+            </button>
+          )}
+          <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusStyle)}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
 
       {lesson.status === 'FAILED' && lesson.errorMessage && (

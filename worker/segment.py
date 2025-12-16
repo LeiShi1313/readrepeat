@@ -166,3 +166,24 @@ if __name__ == '__main__':
 
     test_zh = "你好！今天天气真好。我们去散步吧？"
     print("Chinese:", segment_text(test_zh, 'zh'))
+
+    test_de = """
+Einwohnerkontrolle, Gemeinde Zug, guten Tag.
+Guten Tag, ich möchte mich anmelden. Ich bin neu umgezogen.
+Alles klar. Wann sind Sie eingezogen?
+Am 1. des Monats, also vor zwei Wochen.
+Dann brauchen wir einen Termin. Es geht nächsten Montag um 10:30 oder Dienstag um 14:00.
+Dienstag um 14:00 passt mir besser.
+Gut. Bitte bringen Sie Pass, Aufenthaltstitel, Mietvertrag und, wenn möglich, eine Krankenversicherungskarte mit.
+Muss ich auch ein Formular ausfüllen?
+Ja, vor Ort. Das dauert ungefähr 15 Minuten.
+Wo genau ist das Gemeindehaus?
+In der Altstadt, beim Bahnhof. Eingang rechts, erster Stock.
+Und die Öffnungszeiten?
+Wir sind vormittags ab 8 Uhr geöffnet, am Dienstag auch nachmittags.
+Super. Bekomme ich eine Bestätigung für den Termin?
+Ja, ich sende Ihnen gleich eine E-Mail mit allen Unterlagen.
+Vielen Dank, auf Wiederhören."""
+    print("German:", segment_text(test_de, 'de'))
+
+

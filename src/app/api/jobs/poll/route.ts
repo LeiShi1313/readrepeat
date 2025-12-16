@@ -34,10 +34,21 @@ export async function GET() {
       where: eq(schema.lessons.id, payload.lessonId),
     });
 
+    // For RESLICE_AUDIO jobs, include sentence data with updated timings
+    let sentences = null;
+    if (job.type === 'RESLICE_AUDIO') {
+      sentences = await db
+        .select()
+        .from(schema.sentences)
+        .where(eq(schema.sentences.lessonId, payload.lessonId))
+        .orderBy(schema.sentences.idx);
+    }
+
     return NextResponse.json({
       job: {
         ...job,
         lesson,
+        sentences,
       },
     });
   } catch (error) {
@@ -50,7 +61,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobId, status, errorMessage, sentences } = body;
+    const { jobId, status, errorMessage, sentences, jobType, updatedSentences } = body;
 
     // Update job status
     await db
@@ -74,7 +85,29 @@ export async function POST(request: NextRequest) {
     const payload = JSON.parse(job.payloadJson);
     const lessonId = payload.lessonId;
 
-    // If completed with sentences, insert them
+    // Handle RESLICE_AUDIO completion - just update clip paths
+    if (status === schema.JOB_STATUS.COMPLETED && jobType === 'RESLICE_AUDIO' && updatedSentences) {
+      for (const sent of updatedSentences) {
+        await db
+          .update(schema.sentences)
+          .set({ clipPath: sent.clipPath })
+          .where(eq(schema.sentences.id, sent.id));
+      }
+
+      // Update lesson status to READY
+      await db
+        .update(schema.lessons)
+        .set({
+          status: schema.LESSON_STATUS.READY,
+          errorMessage: null,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(schema.lessons.id, lessonId));
+
+      return NextResponse.json({ success: true });
+    }
+
+    // Handle PROCESS_LESSON completion - insert new sentences
     if (status === schema.JOB_STATUS.COMPLETED && sentences && Array.isArray(sentences)) {
       // Delete existing sentences
       await db.delete(schema.sentences).where(eq(schema.sentences.lessonId, lessonId));
