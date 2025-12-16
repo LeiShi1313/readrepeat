@@ -14,7 +14,7 @@ def slice_audio(
     audio_path: str,
     timings: List[Dict[str, Any]],
     output_dir: str,
-    padding_ms: int = 200
+    padding_ms: int = 50
 ) -> List[str]:
     """
     Slice audio file into clips based on timings.
