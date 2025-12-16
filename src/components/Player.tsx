@@ -33,11 +33,14 @@ interface PlayerProps {
   mode: PlayMode;
 }
 
+// Play modes: off, once (play all once), loop (repeat all), repeat (repeat current)
+type AutoPlayMode = 'off' | 'once' | 'loop' | 'repeat';
+
 export function Player({ lesson, mode }: PlayerProps) {
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [revealedSentences, setRevealedSentences] = useState<Set<number>>(new Set());
   const [lastPlayedUrl, setLastPlayedUrl] = useState<string | null>(null);
-  const [continuousPlay, setContinuousPlay] = useState(false);
+  const [autoPlayMode, setAutoPlayMode] = useState<AutoPlayMode>('off');
   const [wasPlaying, setWasPlaying] = useState(false);
 
   const activeSentenceRef = useRef<HTMLDivElement>(null);
@@ -68,35 +71,57 @@ export function Player({ lesson, mode }: PlayerProps) {
     setWasPlaying(isPlaying);
   }, [isPlaying]);
 
-  // Continuous play: auto-advance when clip finishes
+  // Auto-play: handle different modes when clip finishes
   useEffect(() => {
-    if (continuousPlay && wasPlaying && !isPlaying) {
-      // Clip just finished, advance to next
-      if (currentSentenceIdx < lesson.sentences.length - 1) {
-        const nextIdx = currentSentenceIdx + 1;
-        const nextSentence = lesson.sentences[nextIdx];
-        setCurrentSentenceIdx(nextIdx);
-        if (nextSentence?.id) {
-          const url = `/api/media/sentences/${nextSentence.id}/clip`;
-          // Small delay to ensure state updates
-          setTimeout(() => {
-            playClip(url);
-            setLastPlayedUrl(url);
-          }, 100);
+    if (autoPlayMode !== 'off' && wasPlaying && !isPlaying) {
+      // Clip just finished
+      if (autoPlayMode === 'repeat') {
+        // Repeat current sentence
+        const url = `/api/media/sentences/${currentSentence.id}/clip`;
+        setTimeout(() => {
+          playClip(url);
+          setLastPlayedUrl(url);
+        }, 100);
+      } else if (autoPlayMode === 'once' || autoPlayMode === 'loop') {
+        // Check if we can advance
+        if (currentSentenceIdx < lesson.sentences.length - 1) {
+          // Advance to next
+          const nextIdx = currentSentenceIdx + 1;
+          const nextSentence = lesson.sentences[nextIdx];
+          setCurrentSentenceIdx(nextIdx);
+          if (nextSentence?.id) {
+            const url = `/api/media/sentences/${nextSentence.id}/clip`;
+            setTimeout(() => {
+              playClip(url);
+              setLastPlayedUrl(url);
+            }, 100);
+          }
+        } else if (autoPlayMode === 'loop') {
+          // Loop back to beginning
+          const firstSentence = lesson.sentences[0];
+          setCurrentSentenceIdx(0);
+          if (firstSentence?.id) {
+            const url = `/api/media/sentences/${firstSentence.id}/clip`;
+            setTimeout(() => {
+              playClip(url);
+              setLastPlayedUrl(url);
+            }, 100);
+          }
         }
+        // For 'once' mode at end, just stop (do nothing)
       }
     }
-  }, [isPlaying, wasPlaying, continuousPlay, currentSentenceIdx, lesson.sentences, playClip]);
+  }, [isPlaying, wasPlaying, autoPlayMode, currentSentenceIdx, currentSentence, lesson.sentences, playClip]);
 
-  // Auto-scroll to center the active sentence when continuous play is enabled
+  // Auto-scroll to center the active sentence when auto-play is enabled
   useEffect(() => {
-    if (continuousPlay && activeSentenceRef.current) {
+    if (autoPlayMode !== 'off' && activeSentenceRef.current) {
       activeSentenceRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
     }
-  }, [continuousPlay, currentSentenceIdx]);
+  }, [autoPlayMode, currentSentenceIdx]);
 
   // Navigation handlers
   const goToNext = useCallback(() => {
@@ -306,25 +331,60 @@ export function Player({ lesson, mode }: PlayerProps) {
               </button>
             </div>
 
-            {/* Continuous play toggle */}
+            {/* Auto-play mode toggle */}
             <button
-              onClick={() => setContinuousPlay(!continuousPlay)}
+              onClick={() => {
+                const modes: AutoPlayMode[] = ['off', 'once', 'loop', 'repeat'];
+                const currentIndex = modes.indexOf(autoPlayMode);
+                const nextIndex = (currentIndex + 1) % modes.length;
+                setAutoPlayMode(modes[nextIndex]);
+              }}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors min-w-[100px] justify-end ${
-                continuousPlay
+                autoPlayMode !== 'off'
                   ? 'text-blue-600'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
-              title="Auto-play next sentence"
+              title={
+                autoPlayMode === 'off' ? 'Auto-play off' :
+                autoPlayMode === 'once' ? 'Play all once' :
+                autoPlayMode === 'loop' ? 'Loop all' :
+                'Repeat current'
+              }
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              <span>{continuousPlay ? 'Auto' : 'Auto'}</span>
+              {autoPlayMode === 'off' && (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Off</span>
+                </>
+              )}
+              {autoPlayMode === 'once' && (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                  <span>All</span>
+                </>
+              )}
+              {autoPlayMode === 'loop' && (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Loop</span>
+                </>
+              )}
+              {autoPlayMode === 'repeat' && (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m0 0a8.001 8.001 0 0115.356 2M4.582 9H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <text x="12" y="13" textAnchor="middle" fontSize="6" fill="currentColor" fontWeight="bold">1</text>
+                  </svg>
+                  <span>Repeat</span>
+                </>
+              )}
             </button>
           </div>
         </div>
