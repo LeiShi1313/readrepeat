@@ -2,12 +2,19 @@
 Align transcript words to user's text sentences using dynamic programming
 """
 
+import os
 import re
 from typing import List, Dict, Any, Tuple, Optional
 import Levenshtein
 
 import logging
 logger = logging.getLogger(__name__)
+
+# Global offsets to compensate for systematic timing shifts (e.g., from Whisper)
+# Negative value = shift earlier (if audio plays too late)
+# Positive value = shift later (if audio plays too early)
+START_OFFSET_MS = int(os.environ.get('START_OFFSET_MS', '0'))
+END_OFFSET_MS = int(os.environ.get('END_OFFSET_MS', '250'))
 
 
 def normalize_for_comparison(text: str) -> str:
@@ -67,6 +74,9 @@ def align_transcript_to_text(
         - end_ms: int
         - confidence: float
     """
+    if START_OFFSET_MS != 0 or END_OFFSET_MS != 0:
+        logger.info(f'Alignment timing offsets: start={START_OFFSET_MS}ms, end={END_OFFSET_MS}ms')
+
     if not transcript_words:
         logger.warning('No transcript words, returning empty timings')
         return [{'start_ms': 0, 'end_ms': 0, 'confidence': 0.0} for _ in sentences]
@@ -169,11 +179,18 @@ def find_best_window(
     if best_start is None or best_score < 0.3:
         return {'start_idx': None, 'end_idx': None, 'start_ms': 0, 'end_ms': 0, 'confidence': 0.0}
 
+    # Apply timing offsets to compensate for systematic Whisper timestamp shifts
+    raw_start_ms = round(transcript_words[best_start]['start'] * 1000)
+    raw_end_ms = round(transcript_words[best_end]['end'] * 1000)
+
+    adjusted_start_ms = max(0, raw_start_ms + START_OFFSET_MS)
+    adjusted_end_ms = raw_end_ms + END_OFFSET_MS
+
     return {
         'start_idx': best_start,
         'end_idx': best_end,
-        'start_ms': round(transcript_words[best_start]['start'] * 1000),
-        'end_ms': round(transcript_words[best_end]['end'] * 1000),
+        'start_ms': adjusted_start_ms,
+        'end_ms': adjusted_end_ms,
         'confidence': best_score,
     }
 

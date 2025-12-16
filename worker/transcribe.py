@@ -90,7 +90,7 @@ def transcribe_audio(
     # Prepare transcribe arguments
     transcribe_args = {
         'word_timestamps': True,
-        'vad_filter': True,  # Filter out silence
+        'vad_filter': False,  # Disabled - VAD can cause timestamp shifts
     }
 
     if language:

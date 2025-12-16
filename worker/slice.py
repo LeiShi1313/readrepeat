@@ -10,11 +10,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Padding to add at start/end of clips (extra buffer to avoid abrupt cuts)
+# This is applied during slicing only, not stored in DB
+PADDING_MS = int(os.environ.get('SLICE_PADDING_MS', '50'))
+
+
 def slice_audio(
     audio_path: str,
     timings: List[Dict[str, Any]],
     output_dir: str,
-    padding_ms: int = 50
 ) -> List[str]:
     """
     Slice audio file into clips based on timings.
@@ -23,7 +27,6 @@ def slice_audio(
         audio_path: Path to source audio file
         timings: List of dicts with start_ms and end_ms
         output_dir: Directory to save clips
-        padding_ms: Padding to add at start/end of clips
 
     Returns:
         List of clip file paths
@@ -33,8 +36,9 @@ def slice_audio(
     clip_paths = []
 
     for idx, timing in enumerate(timings):
-        start_ms = max(0, timing['start_ms'] - padding_ms)
-        end_ms = timing['end_ms'] + padding_ms
+        # Apply padding for smoother clip boundaries
+        start_ms = max(0, timing['start_ms'] - PADDING_MS)
+        end_ms = timing['end_ms'] + PADDING_MS
         duration_ms = end_ms - start_ms
 
         clip_path = os.path.join(output_dir, f'{idx}.wav')
@@ -45,19 +49,23 @@ def slice_audio(
             logger.warning(f'Created silent placeholder for sentence {idx}')
         else:
             # Use ffmpeg to extract clip
+            # Using -ss after -i for frame-accurate seeking (slower but precise)
             start_sec = start_ms / 1000.0
             duration_sec = duration_ms / 1000.0
 
             cmd = [
                 'ffmpeg', '-y',
-                '-ss', str(start_sec),
                 '-i', audio_path,
+                '-ss', str(start_sec),
                 '-t', str(duration_sec),
                 '-c:a', 'pcm_s16le',
                 '-ar', '16000',
                 '-ac', '1',
                 clip_path
             ]
+
+            logger.info(f'Clip {idx}: {timing["start_ms"]}ms-{timing["end_ms"]}ms -> with padding: {start_ms}ms-{end_ms}ms (duration: {duration_ms}ms)')
+            logger.info(f'ffmpeg cmd: -ss {start_sec} -t {duration_sec}')
 
             try:
                 result = subprocess.run(
@@ -66,7 +74,7 @@ def slice_audio(
                     capture_output=True,
                     text=True
                 )
-                logger.debug(f'Created clip {idx}: {start_ms}ms - {end_ms}ms')
+                logger.info(f'Created clip {idx}: {start_ms}ms - {end_ms}ms')
             except subprocess.CalledProcessError as e:
                 logger.error(f'Failed to create clip {idx}: {e.stderr}')
                 clip_path = create_silent_clip(output_dir, idx, 1000)
