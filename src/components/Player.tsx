@@ -42,6 +42,7 @@ export function Player({ lesson, mode }: PlayerProps) {
   const [lastPlayedUrl, setLastPlayedUrl] = useState<string | null>(null);
   const [autoPlayMode, setAutoPlayMode] = useState<AutoPlayMode>('off');
   const [wasPlaying, setWasPlaying] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
 
   const activeSentenceRef = useRef<HTMLDivElement>(null);
 
@@ -71,10 +72,10 @@ export function Player({ lesson, mode }: PlayerProps) {
     setWasPlaying(isPlaying);
   }, [isPlaying]);
 
-  // Auto-play: handle different modes when clip finishes
+  // Auto-play: handle different modes when clip finishes naturally (not user-paused)
   useEffect(() => {
-    if (autoPlayMode !== 'off' && wasPlaying && !isPlaying) {
-      // Clip just finished
+    if (autoPlayMode !== 'off' && wasPlaying && !isPlaying && !userPaused) {
+      // Clip just finished naturally
       if (autoPlayMode === 'repeat') {
         // Repeat current sentence
         const url = `/api/media/sentences/${currentSentence.id}/clip`;
@@ -111,7 +112,7 @@ export function Player({ lesson, mode }: PlayerProps) {
         // For 'once' mode at end, just stop (do nothing)
       }
     }
-  }, [isPlaying, wasPlaying, autoPlayMode, currentSentenceIdx, currentSentence, lesson.sentences, playClip]);
+  }, [isPlaying, wasPlaying, autoPlayMode, currentSentenceIdx, currentSentence, lesson.sentences, playClip, userPaused]);
 
   // Auto-scroll to center the active sentence when auto-play is enabled
   useEffect(() => {
@@ -159,14 +160,21 @@ export function Player({ lesson, mode }: PlayerProps) {
 
   const playCurrentSentence = useCallback(() => {
     if (currentSentence?.id) {
+      setUserPaused(false); // Clear pause flag when playing
       const url = `/api/media/sentences/${currentSentence.id}/clip`;
       playClip(url);
       setLastPlayedUrl(url);
     }
   }, [currentSentence, playClip]);
 
+  const handlePause = useCallback(() => {
+    setUserPaused(true); // Set flag to prevent auto-play from continuing
+    pause();
+  }, [pause]);
+
   const playSentence = useCallback(
     (sentence: Sentence, idx: number) => {
+      setUserPaused(false); // Clear pause flag when playing
       setCurrentSentenceIdx(idx);
       if (sentence.id) {
         const url = `/api/media/sentences/${sentence.id}/clip`;
@@ -182,7 +190,7 @@ export function Player({ lesson, mode }: PlayerProps) {
     () => ({
       ' ': () => {
         if (isPlaying) {
-          pause();
+          handlePause();
         } else {
           playCurrentSentence();
         }
@@ -196,7 +204,7 @@ export function Player({ lesson, mode }: PlayerProps) {
       Enter: () => revealSentence(currentSentenceIdx),
       h: () => revealSentence(currentSentenceIdx),
     }),
-    [isPlaying, pause, playCurrentSentence, goToNext, goToPrev, revealSentence, currentSentenceIdx]
+    [isPlaying, handlePause, playCurrentSentence, goToNext, goToPrev, revealSentence, currentSentenceIdx]
   );
 
   useKeyboardShortcuts(shortcuts);
@@ -303,7 +311,7 @@ export function Player({ lesson, mode }: PlayerProps) {
 
               {/* Play/Pause button */}
               <button
-                onClick={() => isPlaying ? pause() : playCurrentSentence()}
+                onClick={() => isPlaying ? handlePause() : playCurrentSentence()}
                 className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
                 title="Play/Pause (Space)"
               >
