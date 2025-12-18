@@ -85,6 +85,28 @@ def transcribe_audio(
         - end: float (seconds)
         - probability: float
     """
+    words, _ = transcribe_audio_with_info(audio_path, language, model_size)
+    return words
+
+
+def transcribe_audio_with_info(
+    audio_path: str,
+    language: Optional[str] = None,
+    model_size: str = 'base'
+) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Transcribe audio with word-level timestamps and return language info.
+
+    Args:
+        audio_path: Path to normalized WAV file
+        language: Language code for transcription (None for auto-detect)
+        model_size: Whisper model size (tiny, base, small, medium, large-v3)
+
+    Returns:
+        Tuple of:
+        - List of word dictionaries with word, start, end, probability
+        - Info dictionary with language, languageProbability, duration
+    """
     model = get_model(model_size)
 
     # Prepare transcribe arguments
@@ -115,7 +137,15 @@ def transcribe_audio(
                 })
 
     logger.info(f'Transcribed {len(words)} words')
-    return words
+
+    # Build info dict
+    transcription_info = {
+        'language': info.language,
+        'languageProbability': info.language_probability,
+        'duration': info.duration,
+    }
+
+    return words, transcription_info
 
 
 if __name__ == '__main__':
