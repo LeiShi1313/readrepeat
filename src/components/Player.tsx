@@ -78,10 +78,15 @@ export function Player({ lesson, mode }: PlayerProps) {
 
   // Play user's recording for a sentence
   const handlePlayRecording = useCallback((sentenceId: string) => {
+    // Find the sentence index and update current sentence
+    const idx = lesson.sentences.findIndex((s) => s.id === sentenceId);
+    if (idx !== -1) {
+      setCurrentSentenceIdx(idx);
+    }
     const url = `/api/media/recordings/${sentenceId}`;
     setPlayingRecordingId(sentenceId);
     playClip(url);
-  }, [playClip]);
+  }, [playClip, lesson.sentences]);
 
   // Generate clip URLs for caching
   const clipUrls = useMemo(
