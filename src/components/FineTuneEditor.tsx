@@ -365,70 +365,74 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
   const splitSentence = splitMode ? workingSentences.find((s) => s.id === splitMode.sentenceId) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="flex-shrink-0 bg-white border-b z-10">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link
               href={`/lesson/${lesson.id}`}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
               title="Back to lesson"
             >
               <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <div>
-              <h1 className="font-semibold text-gray-900">Fine-tune Segments</h1>
-              <p className="text-sm text-gray-500">{lesson.title}</p>
+            <div className="min-w-0">
+              <h1 className="font-semibold text-gray-900 text-sm sm:text-base truncate">Fine-tune</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">{lesson.title}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* Merge button */}
             <button
               onClick={handleMerge}
               disabled={!canMerge || isSaving}
-              className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200 transition-colors flex items-center gap-1.5"
+              className="p-1.5 sm:px-3 sm:py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200 transition-colors flex items-center gap-1.5"
               title="Merge selected segments (select 2+ adjacent)"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h8m-4-9v18" />
               </svg>
-              Merge
+              <span className="hidden sm:inline">Merge</span>
             </button>
 
             {/* Split button */}
             <button
               onClick={handleStartSplit}
               disabled={!canSplit || isSaving}
-              className="px-3 py-1.5 text-sm bg-orange-100 text-orange-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-200 transition-colors flex items-center gap-1.5"
+              className="p-1.5 sm:px-3 sm:py-1.5 text-sm bg-orange-100 text-orange-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-200 transition-colors flex items-center gap-1.5"
               title="Split selected segment"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m-8-8h16" />
               </svg>
-              Split
+              <span className="hidden sm:inline">Split</span>
             </button>
 
-            <div className="w-px h-6 bg-gray-200 mx-1" />
+            <div className="w-px h-5 bg-gray-200 hidden sm:block" />
 
             {hasChanges && (
               <button
                 onClick={handleReset}
                 disabled={isSaving}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                className="p-1.5 sm:px-3 sm:py-1.5 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                title="Reset changes"
               >
-                Reset
+                <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">Reset</span>
               </button>
             )}
             <button
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 sm:gap-2"
             >
-              {isSaving && (
+              {isSaving ? (
                 <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path
@@ -437,8 +441,13 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
+              ) : (
+                <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               )}
-              {isSaving ? 'Saving...' : 'Save & Re-slice'}
+              <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save & Re-slice'}</span>
+              <span className="sm:hidden">{isSaving ? '...' : 'Save'}</span>
             </button>
           </div>
         </div>
@@ -446,15 +455,15 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
 
       {/* Error message */}
       {error && (
-        <div className="max-w-6xl mx-auto px-4 mt-4">
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+        <div className="flex-shrink-0 max-w-6xl mx-auto px-4 mt-2 w-full">
+          <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
         </div>
       )}
 
       {/* Split mode indicator */}
       {splitMode && (
-        <div className="max-w-6xl mx-auto px-4 mt-4">
-          <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-orange-700 text-sm flex items-center justify-between">
+        <div className="flex-shrink-0 max-w-6xl mx-auto px-4 mt-2 w-full">
+          <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-orange-700 text-sm flex items-center justify-between">
             <span>
               <strong>Split mode:</strong> Click on the waveform to select split point
               {splitMode.splitTimeMs !== null && ` (${formatMs(splitMode.splitTimeMs)})`}
@@ -469,96 +478,87 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
         </div>
       )}
 
-      {/* Main content */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Waveform editor - takes 2 columns */}
-          <div className="lg:col-span-2">
-            <WaveformEditor
-              ref={waveformRef}
-              lessonId={lesson.id}
-              sentences={workingSentences}
-              onTimingsChange={handleTimingsChange}
-              selectedSentenceId={selectedSentenceId}
-              onSentenceSelect={handleWaveformSelect}
-              splitMode={splitMode}
-              onSplitPointSelect={handleSplitPointSelect}
-            />
+      {/* Main content - flex column to fill remaining height */}
+      <main className="flex flex-col flex-1 min-h-0 max-w-6xl mx-auto px-4 py-2 w-full">
+        {/* Waveform editor */}
+        <div className="flex-shrink-0">
+          <WaveformEditor
+            ref={waveformRef}
+            lessonId={lesson.id}
+            sentences={workingSentences}
+            onTimingsChange={handleTimingsChange}
+            selectedSentenceId={selectedSentenceId}
+            onSentenceSelect={handleWaveformSelect}
+            splitMode={splitMode}
+            onSplitPointSelect={handleSplitPointSelect}
+          />
+        </div>
+
+        {/* Segment list - takes remaining height */}
+        <div className="flex-1 mt-4 min-h-0 flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex-shrink-0 px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h2 className="font-medium text-gray-900 text-sm">Segments</h2>
+              <p className="text-xs text-gray-500">
+                {workingSentences.length} sentences
+                {selectedIds.size > 1 && ` (${selectedIds.size} selected)`}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400">
+              Ctrl+click to multi-select. Shift+click for range.
+            </p>
           </div>
 
-          {/* Segment list */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <h2 className="font-medium text-gray-900">Segments</h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  {workingSentences.length} sentences
-                  {selectedIds.size > 1 && ` (${selectedIds.size} selected)`}
-                </p>
-              </div>
+          <div className="flex-1 divide-y divide-gray-100 overflow-y-auto">
+            {workingSentences.map((sentence) => {
+              const isSelected = selectedIds.has(sentence.id);
+              const original = originalSentenceMap.get(sentence.originalId || sentence.id);
+              const isModified =
+                sentence.isNew ||
+                (original &&
+                  (sentence.startMs !== (original.startMs ?? 0) ||
+                    sentence.endMs !== (original.endMs ?? 0) ||
+                    sentence.foreignText !== original.foreignText));
 
-              <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                {workingSentences.map((sentence) => {
-                  const isSelected = selectedIds.has(sentence.id);
-                  const original = originalSentenceMap.get(sentence.originalId || sentence.id);
-                  const isModified =
-                    sentence.isNew ||
-                    (original &&
-                      (sentence.startMs !== (original.startMs ?? 0) ||
-                        sentence.endMs !== (original.endMs ?? 0) ||
-                        sentence.foreignText !== original.foreignText));
-
-                  return (
-                    <button
-                      key={sentence.id}
-                      ref={(el) => {
-                        if (el) {
-                          segmentRefsMap.current.set(sentence.id, el);
-                        } else {
-                          segmentRefsMap.current.delete(sentence.id);
-                        }
-                      }}
-                      onClick={(e) => handleSentenceClick(sentence.id, e)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                        isSelected ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-400">#{sentence.idx + 1}</span>
-                            {sentence.isNew && (
-                              <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">New</span>
-                            )}
-                            {isModified && !sentence.isNew && (
-                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">Modified</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-900 truncate mt-1">{sentence.foreignText}</p>
-                          <p className="text-xs text-gray-500 truncate">{sentence.translationText}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                        <span>{formatMs(sentence.startMs)}</span>
-                        <span>-</span>
-                        <span>{formatMs(sentence.endMs)}</span>
-                        <span className="text-gray-300">
-                          ({((sentence.endMs - sentence.startMs) / 1000).toFixed(1)}s)
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Help text */}
-              <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
-                  Ctrl+click to multi-select. Shift+click for range.
-                </p>
-              </div>
-            </div>
+              return (
+                <button
+                  key={sentence.id}
+                  ref={(el) => {
+                    if (el) {
+                      segmentRefsMap.current.set(sentence.id, el);
+                    } else {
+                      segmentRefsMap.current.delete(sentence.id);
+                    }
+                  }}
+                  onClick={(e) => handleSentenceClick(sentence.id, e)}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
+                    isSelected ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-gray-400 w-6">#{sentence.idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 truncate">{sentence.foreignText}</p>
+                      <p className="text-xs text-gray-500 truncate">{sentence.translationText}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {sentence.isNew && (
+                        <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">New</span>
+                      )}
+                      {isModified && !sentence.isNew && (
+                        <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">Modified</span>
+                      )}
+                      <span className="text-xs text-gray-400 tabular-nums">
+                        {formatMs(sentence.startMs)} - {formatMs(sentence.endMs)}
+                      </span>
+                      <span className="text-xs text-gray-300">
+                        ({((sentence.endMs - sentence.startMs) / 1000).toFixed(1)}s)
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </main>

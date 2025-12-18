@@ -125,6 +125,7 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
     const regions = RegionsPlugin.create();
     regionsRef.current = regions;
 
+    // Thick bars for fine-tune page
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
       waveColor: '#94a3b8',
@@ -132,9 +133,11 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       cursorColor: '#1e40af',
       cursorWidth: 2,
       height: 128,
-      barWidth: 2,
+      barWidth: 3,
       barGap: 1,
       barRadius: 2,
+      normalize: true,
+      minPxPerSec: 50,
       plugins: [regions],
     });
 

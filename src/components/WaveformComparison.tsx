@@ -88,33 +88,29 @@ export function WaveformComparison({
   useEffect(() => {
     if (!originalContainerRef.current || !recordingContainerRef.current) return;
 
-    // Create original waveform (blue)
+    // Create original waveform (blue) - Design 1: High Resolution Line
     const originalWs = WaveSurfer.create({
       container: originalContainerRef.current,
       waveColor: '#3b82f6',
       progressColor: '#1d4ed8',
       cursorColor: '#1e40af',
-      cursorWidth: 2,
-      height: 64,
-      barWidth: 2,
-      barGap: 1,
-      barRadius: 2,
+      cursorWidth: 1,
+      height: 80,
       normalize: true,
+      minPxPerSec: 50,
     });
     originalWsRef.current = originalWs;
 
-    // Create recording waveform (green)
+    // Create recording waveform (green) - Design 1: High Resolution Line
     const recordingWs = WaveSurfer.create({
       container: recordingContainerRef.current,
       waveColor: '#22c55e',
       progressColor: '#16a34a',
       cursorColor: '#15803d',
-      cursorWidth: 2,
-      height: 64,
-      barWidth: 2,
-      barGap: 1,
-      barRadius: 2,
+      cursorWidth: 1,
+      height: 80,
       normalize: true,
+      minPxPerSec: 50,
     });
     recordingWsRef.current = recordingWs;
 
