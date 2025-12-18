@@ -3,6 +3,7 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { PlayMode } from './ModeToggle';
+import { RecordButton } from './RecordButton';
 
 interface Sentence {
   id: string;
@@ -23,6 +24,12 @@ interface SentenceRowProps {
   mode: PlayMode;
   onPlay: () => void;
   onReveal: () => void;
+  // Recording props
+  hasRecording?: boolean;
+  isPlayingRecording?: boolean;
+  onRecordingComplete?: (sentenceId: string, recordingId: string) => void;
+  onRecordingDelete?: (sentenceId: string) => void;
+  onPlayRecording?: (sentenceId: string) => void;
 }
 
 export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function SentenceRow({
@@ -33,6 +40,11 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
   mode,
   onPlay,
   onReveal,
+  hasRecording = false,
+  isPlayingRecording = false,
+  onRecordingComplete,
+  onRecordingDelete,
+  onPlayRecording,
 }, ref) {
   const showForeign = mode === 'A' || isRevealed;
   const hasLowConfidence = sentence.confidence !== null && sentence.confidence < 0.5;
@@ -114,10 +126,25 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
               e.stopPropagation();
               onReveal();
             }}
-            className="ml-auto text-xs text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
           >
             {isRevealed ? 'Hide' : 'Reveal'}
           </button>
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Record button */}
+        {onRecordingComplete && onRecordingDelete && (
+          <RecordButton
+            sentenceId={sentence.id}
+            hasRecording={hasRecording}
+            isPlayingRecording={isPlayingRecording}
+            onRecordingComplete={onRecordingComplete}
+            onRecordingDelete={onRecordingDelete}
+            onPlayRecording={onPlayRecording}
+          />
         )}
       </div>
     </div>

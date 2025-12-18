@@ -82,6 +82,22 @@ export const jobs = sqliteTable('jobs', {
     .default(sql`(datetime('now'))`),
 });
 
+// User recordings table (for voice comparison feature)
+export const userRecordings = sqliteTable('user_recordings', {
+  id: text('id').primaryKey(),
+  sentenceId: text('sentence_id')
+    .notNull()
+    .references(() => sentences.id, { onDelete: 'cascade' }),
+  audioPath: text('audio_path').notNull(),
+  durationMs: integer('duration_ms'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
 // TypeScript types inferred from schema
 export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
@@ -89,3 +105,5 @@ export type Sentence = typeof sentences.$inferSelect;
 export type NewSentence = typeof sentences.$inferInsert;
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
+export type UserRecording = typeof userRecordings.$inferSelect;
+export type NewUserRecording = typeof userRecordings.$inferInsert;

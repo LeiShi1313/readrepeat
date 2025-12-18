@@ -7,6 +7,7 @@ import type { PlayMode } from './ModeToggle';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useAudioCache } from '@/hooks/useAudioCache';
+import { useRecordingStatus } from '@/hooks/useRecordingStatus';
 
 interface Sentence {
   id: string;
@@ -43,12 +44,44 @@ export function Player({ lesson, mode }: PlayerProps) {
   const [autoPlayMode, setAutoPlayMode] = useState<AutoPlayMode>('off');
   const [wasPlaying, setWasPlaying] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
 
   const activeSentenceRef = useRef<HTMLDivElement>(null);
 
   const { isPlaying, playClip, pause, setPlaybackRate, playbackRate } = useAudioPlayer();
 
   const currentSentence = lesson.sentences[currentSentenceIdx];
+
+  // Recording status for all sentences
+  const sentenceIds = useMemo(
+    () => lesson.sentences.map((s) => s.id),
+    [lesson.sentences]
+  );
+  const { hasRecording, markRecordingAdded, markRecordingRemoved } = useRecordingStatus(sentenceIds);
+
+  // Clear playing recording state when audio stops
+  useEffect(() => {
+    if (!isPlaying) {
+      setPlayingRecordingId(null);
+    }
+  }, [isPlaying]);
+
+  // Handle recording complete
+  const handleRecordingComplete = useCallback((sentenceId: string, recordingId: string) => {
+    markRecordingAdded(sentenceId, recordingId, null);
+  }, [markRecordingAdded]);
+
+  // Handle recording delete
+  const handleRecordingDelete = useCallback((sentenceId: string) => {
+    markRecordingRemoved(sentenceId);
+  }, [markRecordingRemoved]);
+
+  // Play user's recording for a sentence
+  const handlePlayRecording = useCallback((sentenceId: string) => {
+    const url = `/api/media/recordings/${sentenceId}`;
+    setPlayingRecordingId(sentenceId);
+    playClip(url);
+  }, [playClip]);
 
   // Generate clip URLs for caching
   const clipUrls = useMemo(
@@ -73,9 +106,10 @@ export function Player({ lesson, mode }: PlayerProps) {
   }, [isPlaying]);
 
   // Auto-play: handle different modes when clip finishes naturally (not user-paused)
+  // Note: Auto-play always uses original clips, not user recordings
   useEffect(() => {
-    if (autoPlayMode !== 'off' && wasPlaying && !isPlaying && !userPaused) {
-      // Clip just finished naturally
+    if (autoPlayMode !== 'off' && wasPlaying && !isPlaying && !userPaused && !playingRecordingId) {
+      // Clip just finished naturally (and wasn't a recording playback)
       if (autoPlayMode === 'repeat') {
         // Repeat current sentence
         const url = `/api/media/sentences/${currentSentence.id}/clip`;
@@ -112,7 +146,7 @@ export function Player({ lesson, mode }: PlayerProps) {
         // For 'once' mode at end, just stop (do nothing)
       }
     }
-  }, [isPlaying, wasPlaying, autoPlayMode, currentSentenceIdx, currentSentence, lesson.sentences, playClip, userPaused]);
+  }, [isPlaying, wasPlaying, autoPlayMode, currentSentenceIdx, currentSentence, lesson.sentences, playClip, userPaused, playingRecordingId]);
 
   // Auto-scroll to center the active sentence when auto-play is enabled
   useEffect(() => {
@@ -272,6 +306,11 @@ export function Player({ lesson, mode }: PlayerProps) {
             mode={mode}
             onPlay={() => playSentence(sentence, idx)}
             onReveal={() => revealSentence(idx)}
+            hasRecording={hasRecording(sentence.id)}
+            isPlayingRecording={playingRecordingId === sentence.id && isPlaying}
+            onRecordingComplete={handleRecordingComplete}
+            onRecordingDelete={handleRecordingDelete}
+            onPlayRecording={handlePlayRecording}
           />
         ))}
       </div>

@@ -15,6 +15,13 @@
       "when": 1765644486840,
       "tag": "0001_shocking_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766055162649,
+      "tag": "0002_add_user_recordings",
+      "breakpoints": true
     }
   ]
 }
