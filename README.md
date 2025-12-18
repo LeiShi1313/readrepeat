@@ -121,15 +121,13 @@ readrepeat/
 
 ### Environment Variables
 
-Create a `.env` file in the project root to configure optional services:
+Copy the example environment file and fill in your API keys:
 
 ```bash
-# Translation API (optional)
-DEEPL_API_KEY=your-api-key-here
-
-# Text-to-Speech (optional)
-GEMINI_API_KEY=your-api-key-here
+cp .env.example .env
 ```
+
+See `.env.example` for available configuration options.
 
 #### Web App
 
