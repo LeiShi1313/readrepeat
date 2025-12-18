@@ -132,6 +132,28 @@ def _segment_western(text: str, pattern: str, lang: str) -> List[str]:
     return sentences
 
 
+def strip_speaker_tags(text: str) -> str:
+    """
+    Remove 'Speaker 1:' / 'Speaker 2:' tags from start of lines.
+
+    Used in dialog mode to clean up text before segmentation.
+
+    Args:
+        text: Raw text with possible speaker tags
+
+    Returns:
+        Text with speaker tags removed
+    """
+    lines = text.split('\n')
+    cleaned = []
+    for line in lines:
+        # Remove "Speaker 1:", "Speaker 2:", etc. from start of line
+        line = re.sub(r'^Speaker\s*\d+\s*:\s*', '', line.strip(), flags=re.IGNORECASE)
+        if line:
+            cleaned.append(line)
+    return '\n'.join(cleaned)
+
+
 def tokenize(text: str, lang: str = 'en') -> List[str]:
     """
     Tokenize text into words for alignment.

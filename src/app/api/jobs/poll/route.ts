@@ -47,6 +47,7 @@ export async function GET() {
     return NextResponse.json({
       job: {
         ...job,
+        payload,  // Include parsed payload for TTS jobs
         lesson,
         sentences,
       },
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // Handle PROCESS_LESSON completion - insert new sentences
+    // Handle PROCESS_LESSON or GENERATE_TTS_LESSON completion - insert new sentences
     if (status === schema.JOB_STATUS.COMPLETED && sentences && Array.isArray(sentences)) {
       // Delete existing sentences
       await db.delete(schema.sentences).where(eq(schema.sentences.lessonId, lessonId));
@@ -127,14 +128,21 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // For TTS jobs, also update the audioOriginalPath
+      const lessonUpdate: Record<string, unknown> = {
+        status: schema.LESSON_STATUS.READY,
+        errorMessage: null,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (job.type === 'GENERATE_TTS_LESSON') {
+        lessonUpdate.audioOriginalPath = `data/uploads/lessons/${lessonId}/original.wav`;
+      }
+
       // Update lesson status to READY
       await db
         .update(schema.lessons)
-        .set({
-          status: schema.LESSON_STATUS.READY,
-          errorMessage: null,
-          updatedAt: new Date().toISOString(),
-        })
+        .set(lessonUpdate)
         .where(eq(schema.lessons.id, lessonId));
     }
 

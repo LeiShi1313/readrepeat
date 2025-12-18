@@ -13,6 +13,8 @@ from typing import Optional, Dict, Any
 
 from pipeline import process_lesson
 from reslice import reslice_lesson
+from tts import generate_tts, generate_tts_dialog
+from segment import strip_speaker_tags
 
 # Configuration
 API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:3000')
@@ -143,6 +145,62 @@ def process_job(job: Dict[str, Any]):
             complete_reslice_job(job_id, updated_sentences)
         except Exception as e:
             logger.exception(f'Error re-slicing lesson {lesson["id"]}')
+            fail_job(job_id, str(e))
+
+    elif job_type == 'GENERATE_TTS_LESSON':
+        # Get TTS parameters from job payload
+        payload = job.get('payload', {})
+        voice_name = payload.get('voiceName', 'Zephyr')
+        tts_model = payload.get('ttsModel', 'gemini-2.5-flash-preview-tts')
+        speaker_mode = payload.get('speakerMode', 'article')
+        voice2_name = payload.get('voice2Name', 'Kore')
+
+        try:
+            # Determine output directory and path
+            data_dir = os.environ.get('DATA_DIR', '/app/data')
+            lesson_dir = os.path.join(data_dir, 'uploads', 'lessons', lesson['id'])
+            os.makedirs(lesson_dir, exist_ok=True)
+            audio_path = os.path.join(lesson_dir, 'original.wav')
+
+            # Get the text to process
+            foreign_text = lesson['foreignTextRaw']
+            translation_text = lesson['translationTextRaw']
+
+            # Generate audio using TTS
+            if speaker_mode == 'dialog':
+                logger.info(f'Generating dialog TTS for lesson {lesson["id"]} with voice1={voice_name}, voice2={voice2_name}')
+                generate_tts_dialog(
+                    text=foreign_text,
+                    output_path=audio_path,
+                    voice1=voice_name,
+                    voice2=voice2_name,
+                    model=tts_model,
+                )
+                # Strip speaker tags from text before processing
+                foreign_text = strip_speaker_tags(foreign_text)
+                translation_text = strip_speaker_tags(translation_text)
+            else:
+                logger.info(f'Generating TTS for lesson {lesson["id"]} with voice={voice_name}')
+                generate_tts(
+                    text=foreign_text,
+                    output_path=audio_path,
+                    voice_name=voice_name,
+                    model=tts_model,
+                )
+
+            # Now process the lesson with the generated audio
+            sentences = process_lesson(
+                lesson_id=lesson['id'],
+                foreign_text=foreign_text,
+                translation_text=translation_text,
+                audio_path=audio_path,
+                foreign_lang=lesson.get('foreignLang', 'en'),
+                translation_lang=lesson.get('translationLang', 'zh'),
+                whisper_model=lesson.get('whisperModel', 'base'),
+            )
+            complete_job(job_id, sentences)
+        except Exception as e:
+            logger.exception(f'Error generating TTS for lesson {lesson["id"]}')
             fail_job(job_id, str(e))
 
     else:
