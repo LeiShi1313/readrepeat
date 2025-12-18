@@ -6,9 +6,12 @@ A distraction-free shadow reading web application for language learning. Upload 
 
 - **Intelligent Audio Alignment**: Uses Whisper AI to transcribe audio and align it with your text
 - **Sentence-by-Sentence Playback**: Click any sentence to hear its audio clip
+- **Voice Recording**: Record your own pronunciation for each sentence and compare with the original
 - **Two Practice Modes**:
   - **Mode A (Reveal All)**: See both foreign text and translation while practicing
   - **Mode B (Translation First)**: Translation visible, foreign text blurred until you reveal it
+- **Auto-Play Modes**: Off, play all once, loop all, or repeat current sentence
+- **Offline Support**: PWA with audio caching for offline practice
 - **Keyboard Shortcuts**: Space (play), J/K (navigate), H (reveal/hide)
 - **Multiple Language Support**: English, Chinese, Japanese, Korean, Spanish, French, German
 
@@ -145,6 +148,10 @@ readrepeat/
 | `GET` | `/api/lessons/[id]` | Get lesson with sentences |
 | `POST` | `/api/lessons/[id]/audio` | Upload audio file |
 | `GET` | `/api/media/sentences/[id]/clip` | Stream sentence audio clip |
+| `POST` | `/api/recordings/[sentenceId]` | Upload voice recording |
+| `GET` | `/api/recordings/[sentenceId]` | Check if recording exists |
+| `DELETE` | `/api/recordings/[sentenceId]` | Delete recording |
+| `GET` | `/api/media/recordings/[sentenceId]` | Stream user recording |
 
 ## Keyboard Shortcuts
 
