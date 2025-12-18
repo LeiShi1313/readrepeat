@@ -14,6 +14,8 @@ A distraction-free shadow reading web application for language learning. Upload 
 - **Offline Support**: PWA with audio caching for offline practice
 - **Keyboard Shortcuts**: Space (play), J/K (navigate), H (reveal/hide)
 - **Multiple Language Support**: English, Chinese, Japanese, Korean, Spanish, French, German
+- **Auto Translation**: Optional integration with translation APIs (DeepL) to auto-translate foreign text
+- **Text-to-Speech**: Generate audio from text using Google Gemini TTS as an alternative to uploading audio files
 
 ## Tech Stack
 
@@ -119,6 +121,23 @@ readrepeat/
 
 ### Environment Variables
 
+Create a `.env` file in the project root to configure optional services:
+
+```bash
+# Translation API (optional)
+DEEPL_API_KEY=your-api-key-here
+
+# Text-to-Speech (optional)
+GEMINI_API_KEY=your-api-key-here
+```
+
+#### Web App
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEEPL_API_KEY` | - | DeepL API key for auto-translation (optional) |
+| `GEMINI_API_KEY` | - | Google Gemini API key for TTS audio generation (optional) |
+
 #### Worker
 
 | Variable | Default | Description |
@@ -128,6 +147,7 @@ readrepeat/
 | `WHISPER_DEVICE` | `cpu` | `cpu`, `cuda`, or `auto` |
 | `WHISPER_COMPUTE_TYPE` | `int8` | `int8`, `float16`, `float32` |
 | `WHISPER_MODEL` | `base` | `tiny`, `base`, `small`, `medium`, `large-v3` |
+| `GEMINI_API_KEY` | - | Google Gemini API key for TTS audio generation |
 
 ### Whisper Model Sizes
 
@@ -152,6 +172,10 @@ readrepeat/
 | `GET` | `/api/recordings/[sentenceId]` | Check if recording exists |
 | `DELETE` | `/api/recordings/[sentenceId]` | Delete recording |
 | `GET` | `/api/media/recordings/[sentenceId]` | Stream user recording |
+| `GET` | `/api/translate/config` | Get available translation providers |
+| `POST` | `/api/translate` | Translate text using specified provider |
+| `GET` | `/api/tts/config` | Get available TTS providers and voices |
+| `POST` | `/api/lessons/[id]/tts` | Generate TTS audio for lesson |
 
 ## Keyboard Shortcuts
 
