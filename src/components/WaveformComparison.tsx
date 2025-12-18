@@ -132,13 +132,21 @@ export function WaveformComparison({
 
     // Cleanup
     return () => {
-      if (originalWsRef.current) {
-        originalWsRef.current.destroy();
-        originalWsRef.current = null;
+      try {
+        if (originalWsRef.current) {
+          originalWsRef.current.destroy();
+          originalWsRef.current = null;
+        }
+      } catch {
+        // Ignore AbortError when component unmounts during load
       }
-      if (recordingWsRef.current) {
-        recordingWsRef.current.destroy();
-        recordingWsRef.current = null;
+      try {
+        if (recordingWsRef.current) {
+          recordingWsRef.current.destroy();
+          recordingWsRef.current = null;
+        }
+      } catch {
+        // Ignore AbortError when component unmounts during load
       }
     };
   }, [originalUrl, recordingUrl, recordingVersion]);

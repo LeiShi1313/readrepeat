@@ -239,7 +239,11 @@ function WaveformPreview({ design, audioUrl, speed, zoom }: { design: WaveformDe
     ws.load(audioUrl);
 
     return () => {
-      ws.destroy();
+      try {
+        ws.destroy();
+      } catch {
+        // Ignore AbortError when component unmounts during load
+      }
     };
   }, [design, audioUrl, zoom]);
 

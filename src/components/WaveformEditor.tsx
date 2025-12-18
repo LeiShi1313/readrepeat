@@ -238,10 +238,14 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      if (wavesurfer) {
-        wavesurfer.destroy();
-        wavesurferRef.current = null;
-        regionsRef.current = null;
+      try {
+        if (wavesurfer) {
+          wavesurfer.destroy();
+          wavesurferRef.current = null;
+          regionsRef.current = null;
+        }
+      } catch {
+        // Ignore AbortError when component unmounts during load
       }
     };
     // Note: createRegions is stable (no deps) so not included here
