@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +32,53 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const [foreignLang, setForeignLang] = useState(lesson.foreignLang);
   const [translationLang, setTranslationLang] = useState(lesson.translationLang);
   const [whisperModel, setWhisperModel] = useState(lesson.whisperModel);
+  const [translateProviders, setTranslateProviders] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>('');
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/translate/config')
+      .then((res) => res.json())
+      .then((data) => {
+        setTranslateProviders(data.providers || []);
+        if (data.providers?.length > 0) {
+          setSelectedProvider(data.providers[0].id);
+        }
+      })
+      .catch(() => setTranslateProviders([]));
+  }, []);
+
+  const handleTranslate = async () => {
+    if (!foreignText.trim() || !selectedProvider) return;
+
+    setIsTranslating(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: foreignText,
+          sourceLang: foreignLang,
+          targetLang: translationLang,
+          provider: selectedProvider,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Translation failed');
+      }
+
+      const data = await res.json();
+      setTranslationText(data.translatedText);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Translation failed');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const hasChanges =
     foreignText !== lesson.foreignTextRaw ||
@@ -254,9 +301,57 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Translation Text <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Translation Text <span className="text-red-500">*</span>
+            </label>
+            {translateProviders.length > 0 && (
+              <div className="flex items-center gap-2">
+                {translateProviders.length > 1 && (
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value)}
+                    disabled={isTranslating || isLoading}
+                    className="text-xs px-2 py-1 border border-gray-300 rounded bg-white text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    {translateProviders.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={handleTranslate}
+                  disabled={isTranslating || isLoading || !foreignText.trim()}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors',
+                    isTranslating || isLoading || !foreignText.trim()
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                  )}
+                >
+                  {isTranslating ? (
+                    <>
+                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Translating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                      </svg>
+                      {translateProviders.length === 1 ? `Translate (${translateProviders[0].name})` : 'Translate'}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
           <textarea
             value={translationText}
             onChange={(e) => setTranslationText(e.target.value)}
