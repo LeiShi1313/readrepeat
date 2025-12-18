@@ -9,6 +9,8 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
@@ -23,6 +25,8 @@ services:
     build:
       context: ./worker
       dockerfile: Dockerfile.dev
+    env_file:
+      - .env
     environment:
       - API_BASE_URL=http://web:3000
       - POLL_INTERVAL=5
