@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 interface Lesson {
@@ -21,14 +18,12 @@ interface LessonCardProps {
 const STATUS_STYLES = {
   UPLOADED: 'bg-gray-100 text-gray-600',
   PROCESSING: 'bg-blue-100 text-blue-700',
-  READY: 'bg-green-100 text-green-700',
   FAILED: 'bg-red-100 text-red-700',
 };
 
 const STATUS_LABELS = {
   UPLOADED: 'Awaiting Audio',
   PROCESSING: 'Processing',
-  READY: 'Ready',
   FAILED: 'Failed',
 };
 
@@ -41,15 +36,8 @@ function formatDate(dateStr: string): string {
 }
 
 export function LessonCard({ lesson }: LessonCardProps) {
-  const router = useRouter();
-  const statusStyle = STATUS_STYLES[lesson.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.UPLOADED;
-  const statusLabel = STATUS_LABELS[lesson.status as keyof typeof STATUS_LABELS] || lesson.status;
-
-  const handleFineTuneClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/lesson/${lesson.id}/fine-tune`);
-  };
+  const statusStyle = STATUS_STYLES[lesson.status as keyof typeof STATUS_STYLES];
+  const statusLabel = STATUS_LABELS[lesson.status as keyof typeof STATUS_LABELS];
 
   return (
     <Link
@@ -58,9 +46,14 @@ export function LessonCard({ lesson }: LessonCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 truncate">
-            {lesson.title}
-          </h3>
+          <div className="flex items-center gap-2">
+            {lesson.status === 'READY' && (
+              <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Ready" />
+            )}
+            <h3 className="font-medium text-gray-900 truncate">
+              {lesson.title}
+            </h3>
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-xs text-gray-400">
               {lesson.foreignLang.toUpperCase()} → {lesson.translationLang.toUpperCase()}
@@ -71,20 +64,11 @@ export function LessonCard({ lesson }: LessonCardProps) {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {lesson.status === 'READY' && (
-            <button
-              onClick={handleFineTuneClick}
-              className="text-xs px-2 py-1 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-              title="Fine-tune audio segments"
-            >
-              Fine-tune
-            </button>
-          )}
-          <span className={cn('text-xs px-2 py-1 rounded-full font-medium', statusStyle)}>
+        {statusLabel && (
+          <span className={cn('text-xs px-2 py-1 rounded-full font-medium flex-shrink-0', statusStyle)}>
             {statusLabel}
           </span>
-        </div>
+        )}
       </div>
 
       {lesson.status === 'FAILED' && lesson.errorMessage && (
