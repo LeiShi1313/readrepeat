@@ -125,6 +125,7 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
         )}
 
         {/* Reveal/hide toggle (shown when secondary text can be toggled) */}
+        {isRevealed && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -132,8 +133,9 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
           }}
           className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
         >
-          {isRevealed ? 'Hide' : 'Reveal'}
-        </button>
+          Hide
+          </button>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
