@@ -2,7 +2,7 @@
 
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { PlayMode } from './ModeToggle';
+import type { PrimaryText } from '@/lib/atoms';
 import { RecordButton } from './RecordButton';
 
 interface Sentence {
@@ -21,7 +21,7 @@ interface SentenceRowProps {
   isActive: boolean;
   isPlaying: boolean;
   isRevealed: boolean;
-  mode: PlayMode;
+  primaryText: PrimaryText;
   onPlay: () => void;
   onReveal: () => void;
   // Recording props
@@ -37,7 +37,7 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
   isActive,
   isPlaying,
   isRevealed,
-  mode,
+  primaryText,
   onPlay,
   onReveal,
   hasRecording = false,
@@ -46,8 +46,11 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
   onRecordingDelete,
   onPlayRecording,
 }, ref) {
-  const showForeign = mode === 'A' || isRevealed;
   const hasLowConfidence = sentence.confidence !== null && sentence.confidence < 0.5;
+
+  // Content based on mode - which text goes to which position
+  const alwaysShowContent = primaryText === 'foreign' ? sentence.foreignText : sentence.translationText;
+  const hideableContent = primaryText === 'foreign' ? sentence.translationText : sentence.foreignText;
 
   return (
     <div
@@ -60,25 +63,27 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
       )}
       onClick={onPlay}
     >
-      {/* Translation text (always visible) */}
-      <div className="text-slate-500 text-sm mb-2 leading-relaxed">
-        {sentence.translationText}
+      {/* Always visible text (top, large) */}
+      <div
+        className={cn(
+          'text-lg leading-relaxed transition-all duration-300 text-slate-800 mb-2',
+          isActive && isPlaying && 'text-blue-600'
+        )}
+      >
+        {alwaysShowContent}
       </div>
 
-      {/* Foreign text (conditionally visible/blurred) */}
+      {/* Hideable text (bottom, small) */}
       <div className="relative">
         <div
           className={cn(
-            'text-lg leading-relaxed transition-all duration-300 text-slate-800',
-            !showForeign && 'blur-sm select-none text-slate-400',
-            isActive && isPlaying && 'text-blue-600'
+            'text-slate-500 text-sm leading-relaxed transition-all duration-300',
+            !isRevealed && 'blur-sm select-none text-slate-300'
           )}
         >
-          {sentence.foreignText}
+          {hideableContent}
         </div>
-
-        {/* Reveal overlay for Mode B */}
-        {!showForeign && (
+        {!isRevealed && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -86,7 +91,7 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
             }}
             className="absolute inset-0 flex items-center justify-center bg-white/30 hover:bg-white/10 transition-colors rounded"
           >
-            <span className="text-sm text-gray-500 bg-white/80 px-3 py-1 rounded-full shadow-sm">
+            <span className="text-xs text-gray-500 bg-white/80 px-2 py-0.5 rounded-full shadow-sm">
               Click to reveal
             </span>
           </button>
@@ -119,18 +124,16 @@ export const SentenceRow = forwardRef<HTMLDivElement, SentenceRowProps>(function
           </span>
         )}
 
-        {/* Mode B: reveal/hide toggle */}
-        {mode === 'B' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onReveal();
-            }}
-            className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            {isRevealed ? 'Hide' : 'Reveal'}
-          </button>
-        )}
+        {/* Reveal/hide toggle (shown when secondary text can be toggled) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onReveal();
+          }}
+          className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {isRevealed ? 'Hide' : 'Reveal'}
+        </button>
 
         {/* Spacer */}
         <div className="flex-1" />
