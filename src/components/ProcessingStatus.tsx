@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface ProcessingStatusProps {
   lessonId: string;
@@ -60,7 +61,16 @@ export function ProcessingStatus({ lessonId }: ProcessingStatusProps) {
           We&apos;re transcribing your audio and aligning it with the text. This may take a minute
           or two.
         </p>
-        <p className="text-sm text-gray-400">This page will automatically refresh when ready.</p>
+        <p className="text-sm text-gray-400 mb-6">This page will automatically refresh when ready.</p>
+        <Link
+          href="/"
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
+        >
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to All Lessons
+        </Link>
       </div>
     </div>
   );
