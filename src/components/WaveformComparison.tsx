@@ -24,6 +24,17 @@ export function WaveformComparison({
   const originalWsRef = useRef<WaveSurfer | null>(null);
   const recordingWsRef = useRef<WaveSurfer | null>(null);
 
+  // Suppress AbortError from WaveSurfer during unmount
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      if (event.reason?.name === 'AbortError') {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   const [isOriginalReady, setIsOriginalReady] = useState(false);
   const [isRecordingReady, setIsRecordingReady] = useState(false);
   const [isOriginalPlaying, setIsOriginalPlaying] = useState(false);
@@ -88,7 +99,11 @@ export function WaveformComparison({
   useEffect(() => {
     if (!originalContainerRef.current || !recordingContainerRef.current) return;
 
-    // Create original waveform (blue) - Design 1: High Resolution Line
+    // Clear any existing waveforms from containers
+    originalContainerRef.current.innerHTML = '';
+    recordingContainerRef.current.innerHTML = '';
+
+    // Create original waveform (blue)
     const originalWs = WaveSurfer.create({
       container: originalContainerRef.current,
       waveColor: '#3b82f6',
@@ -101,7 +116,7 @@ export function WaveformComparison({
     });
     originalWsRef.current = originalWs;
 
-    // Create recording waveform (green) - Design 1: High Resolution Line
+    // Create recording waveform (green)
     const recordingWs = WaveSurfer.create({
       container: recordingContainerRef.current,
       waveColor: '#22c55e',
@@ -130,24 +145,29 @@ export function WaveformComparison({
     recordingWs.on('pause', () => setIsRecordingPlaying(false));
     recordingWs.on('finish', () => setIsRecordingPlaying(false));
 
-    // Cleanup
+    // Catch abort errors that occur during load cancellation
+    const ignoreAbortError = (err: Error) => {
+      if (err.name !== 'AbortError') {
+        console.error('WaveSurfer error:', err);
+      }
+    };
+    originalWs.on('error', ignoreAbortError);
+    recordingWs.on('error', ignoreAbortError);
+
+    // Cleanup - unsubscribe events and clear containers
+    const originalContainer = originalContainerRef.current;
+    const recordingContainer = recordingContainerRef.current;
+
     return () => {
-      try {
-        if (originalWsRef.current) {
-          originalWsRef.current.destroy();
-          originalWsRef.current = null;
-        }
-      } catch {
-        // Ignore AbortError when component unmounts during load
-      }
-      try {
-        if (recordingWsRef.current) {
-          recordingWsRef.current.destroy();
-          recordingWsRef.current = null;
-        }
-      } catch {
-        // Ignore AbortError when component unmounts during load
-      }
+      originalWsRef.current = null;
+      recordingWsRef.current = null;
+      originalWs.unAll();
+      recordingWs.unAll();
+      originalWs.pause();
+      recordingWs.pause();
+      // Clear the DOM elements manually since we can't call destroy()
+      if (originalContainer) originalContainer.innerHTML = '';
+      if (recordingContainer) recordingContainer.innerHTML = '';
     };
   }, [originalUrl, recordingUrl, recordingVersion]);
 
