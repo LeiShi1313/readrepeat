@@ -10,7 +10,7 @@ from typing import Dict, Any
 
 from handlers.base import JobHandler
 from pipeline import process_lesson
-from tts import generate_tts, generate_tts_dialog
+from tts import get_provider
 from segment import strip_speaker_tags
 
 logger = logging.getLogger(__name__)
@@ -38,10 +38,16 @@ class GenerateTtsLessonHandler(JobHandler):
         payload = job.get('payload', {})
 
         # Get TTS parameters
+        provider_id = payload.get('provider', 'gemini')
         voice_name = payload.get('voiceName', 'Zephyr')
-        tts_model = payload.get('ttsModel', 'gemini-2.5-flash-preview-tts')
+        tts_model = payload.get('ttsModel')
         speaker_mode = payload.get('speakerMode', 'article')
         voice2_name = payload.get('voice2Name', 'Kore')
+
+        # Get the provider
+        provider = get_provider(provider_id)
+        if not provider:
+            raise ValueError(f'Unknown TTS provider: {provider_id}')
 
         # Determine output directory and path
         data_dir = os.environ.get('DATA_DIR', '/app/data')
@@ -53,10 +59,10 @@ class GenerateTtsLessonHandler(JobHandler):
         foreign_text = lesson['foreignTextRaw']
         translation_text = lesson['translationTextRaw']
 
-        # Generate audio using TTS
+        # Generate audio using TTS provider
         if speaker_mode == 'dialog':
-            logger.info(f'Generating dialog TTS for lesson {lesson["id"]} with voice1={voice_name}, voice2={voice2_name}')
-            generate_tts_dialog(
+            logger.info(f'Generating dialog TTS for lesson {lesson["id"]} with provider={provider_id}, voice1={voice_name}, voice2={voice2_name}')
+            provider.generate_tts_dialog(
                 text=foreign_text,
                 output_path=audio_path,
                 voice1=voice_name,
@@ -67,8 +73,8 @@ class GenerateTtsLessonHandler(JobHandler):
             foreign_text = strip_speaker_tags(foreign_text)
             translation_text = strip_speaker_tags(translation_text)
         else:
-            logger.info(f'Generating TTS for lesson {lesson["id"]} with voice={voice_name}')
-            generate_tts(
+            logger.info(f'Generating TTS for lesson {lesson["id"]} with provider={provider_id}, voice={voice_name}')
+            provider.generate_tts(
                 text=foreign_text,
                 output_path=audio_path,
                 voice_name=voice_name,
