@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { TTSOptions } from './TTSOptions';
+import { TranscribeButton } from './TranscribeButton';
 
 interface Lesson {
   id: string;
@@ -294,9 +295,16 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Foreign Text <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Foreign Text <span className="text-red-500">*</span>
+            </label>
+            <TranscribeButton
+              onTranscribed={setForeignText}
+              whisperModel={whisperModel}
+              disabled={isLoading}
+            />
+          </div>
           <textarea
             value={foreignText}
             onChange={(e) => setForeignText(e.target.value)}

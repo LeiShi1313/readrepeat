@@ -33,10 +33,12 @@ def _register_all_handlers():
     from handlers.process_lesson import ProcessLessonHandler
     from handlers.reslice import ResliceAudioHandler
     from handlers.tts import GenerateTtsLessonHandler
+    from handlers.transcribe import TranscribeAudioHandler
 
     register_handler(ProcessLessonHandler())
     register_handler(ResliceAudioHandler())
     register_handler(GenerateTtsLessonHandler())
+    register_handler(TranscribeAudioHandler())
 
 
 # Auto-register handlers on module import

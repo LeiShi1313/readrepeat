@@ -4,8 +4,9 @@ Handler for PROCESS_LESSON jobs.
 Processes an uploaded audio file with transcription and alignment.
 """
 
+import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from handlers.base import JobHandler
 from pipeline import process_lesson
@@ -32,8 +33,18 @@ class ProcessLessonHandler(JobHandler):
     def process(self, job: Dict[str, Any]) -> Dict[str, Any]:
         """Process the lesson and return sentences."""
         lesson = job['lesson']
+        audio_file = job.get('audioFile')
 
         logger.info(f'Processing lesson {lesson["id"]}')
+
+        # Check for cached transcription from audio_files
+        cached_transcription: Optional[Dict[str, Any]] = None
+        if audio_file and audio_file.get('transcriptionJson'):
+            try:
+                cached_transcription = json.loads(audio_file['transcriptionJson'])
+                logger.info(f'Found cached transcription with {len(cached_transcription.get("words", []))} words')
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f'Failed to parse cached transcription: {e}')
 
         sentences = process_lesson(
             lesson_id=lesson['id'],
@@ -43,6 +54,7 @@ class ProcessLessonHandler(JobHandler):
             foreign_lang=lesson.get('foreignLang', 'en'),
             translation_lang=lesson.get('translationLang', 'zh'),
             whisper_model=lesson.get('whisperModel', 'base'),
+            cached_transcription=cached_transcription,
         )
 
         return {'sentences': sentences}

@@ -65,6 +65,17 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
   const onTimingsChangeRef = useRef(onTimingsChange);
   const onSentenceSelectRef = useRef(onSentenceSelect);
 
+  // Suppress AbortError from WaveSurfer during unmount
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      if (event.reason?.name === 'AbortError') {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   // Keep refs up to date
   useEffect(() => {
     sentencesRef.current = sentences;
@@ -159,6 +170,13 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
     wavesurfer.on('pause', () => setIsPlaying(false));
     wavesurfer.on('timeupdate', (time) => setCurrentTime(time));
 
+    // Catch abort errors that occur during load cancellation
+    wavesurfer.on('error', (err) => {
+      if (err.name !== 'AbortError') {
+        console.error('WaveSurfer error:', err);
+      }
+    });
+
     // Region events
     regions.on('region-updated', () => {
       const allRegions = regions.getRegions();
@@ -233,20 +251,21 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
       rafRef.current = requestAnimationFrame(checkTime);
     });
 
+    // Store container reference for cleanup
+    const container = containerRef.current;
+
     return () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      try {
-        if (wavesurfer) {
-          wavesurfer.destroy();
-          wavesurferRef.current = null;
-          regionsRef.current = null;
-        }
-      } catch {
-        // Ignore AbortError when component unmounts during load
-      }
+      // Cleanup - unsubscribe events and clear container (don't call destroy to avoid AbortError)
+      wavesurferRef.current = null;
+      regionsRef.current = null;
+      wavesurfer.unAll();
+      wavesurfer.pause();
+      // Clear the DOM elements manually since we can't call destroy()
+      if (container) container.innerHTML = '';
     };
     // Note: createRegions is stable (no deps) so not included here
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,9 +1,92 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1a7eae5b-cff5-4a6a-bfd6-45edde0cd537",
-  "prevId": "e5a31deb-348f-4063-9b4f-171a6774d295",
+  "id": "d9f3g4b2-6c5e-4d7f-0b9c-2e3f5g6h7i8j",
+  "prevId": "c8e2f3a1-5b4d-4c6e-9a8b-1d2e3f4a5b6c",
   "tables": {
+    "audio_files": {
+      "name": "audio_files",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_path": {
+          "name": "file_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "whisper_model": {
+          "name": "whisper_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "transcription_json": {
+          "name": "transcription_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'PENDING'"
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "jobs": {
       "name": "jobs",
       "columns": {
@@ -35,6 +118,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'PENDING'"
+        },
+        "result_json": {
+          "name": "result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "error_message": {
           "name": "error_message",
@@ -241,6 +331,74 @@
           "tableTo": "lessons",
           "columnsFrom": [
             "lesson_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "user_recordings": {
+      "name": "user_recordings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sentence_id": {
+          "name": "sentence_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "audio_path": {
+          "name": "audio_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_recordings_sentence_id_sentences_id_fk": {
+          "name": "user_recordings_sentence_id_sentences_id_fk",
+          "tableFrom": "user_recordings",
+          "tableTo": "sentences",
+          "columnsFrom": [
+            "sentence_id"
           ],
           "columnsTo": [
             "id"

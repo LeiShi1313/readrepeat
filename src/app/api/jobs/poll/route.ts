@@ -28,8 +28,24 @@ export async function GET() {
       })
       .where(eq(schema.jobs.id, job.id));
 
-    // Get associated lesson data for the job
+    // Get associated lesson data for the job (if applicable)
     const payload = JSON.parse(job.payloadJson);
+
+    // TRANSCRIBE_AUDIO jobs need audio file data
+    if (job.type === 'TRANSCRIBE_AUDIO') {
+      const audioFile = await db.query.audioFiles.findFirst({
+        where: eq(schema.audioFiles.id, payload.audioFileId),
+      });
+
+      return NextResponse.json({
+        job: {
+          ...job,
+          payload,
+          audioFile,
+        },
+      });
+    }
+
     const lesson = await db.query.lessons.findFirst({
       where: eq(schema.lessons.id, payload.lessonId),
     });
@@ -44,12 +60,21 @@ export async function GET() {
         .orderBy(schema.sentences.idx);
     }
 
+    // For PROCESS_LESSON jobs, include audio file if available (for transcription reuse)
+    let audioFile = null;
+    if (job.type === 'PROCESS_LESSON' && payload.audioFileId) {
+      audioFile = await db.query.audioFiles.findFirst({
+        where: eq(schema.audioFiles.id, payload.audioFileId),
+      });
+    }
+
     return NextResponse.json({
       job: {
         ...job,
-        payload,  // Include parsed payload for TTS jobs
+        payload,
         lesson,
         sentences,
+        audioFile,
       },
     });
   } catch (error) {
@@ -62,16 +87,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobId, status, errorMessage, sentences, jobType, updatedSentences } = body;
+    const { jobId, status, errorMessage, sentences, jobType, updatedSentences, result } = body;
+
+    // Build update object
+    const jobUpdate: Record<string, unknown> = {
+      status,
+      errorMessage,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Store result for transcription jobs
+    if (result) {
+      jobUpdate.resultJson = JSON.stringify(result);
+    }
 
     // Update job status
     await db
       .update(schema.jobs)
-      .set({
-        status,
-        errorMessage,
-        updatedAt: new Date().toISOString(),
-      })
+      .set(jobUpdate)
       .where(eq(schema.jobs.id, jobId));
 
     // Get job to find lessonId
@@ -81,6 +114,11 @@ export async function POST(request: NextRequest) {
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // TRANSCRIBE_AUDIO jobs don't update lessons
+    if (job.type === 'TRANSCRIBE_AUDIO') {
+      return NextResponse.json({ success: true });
     }
 
     const payload = JSON.parse(job.payloadJson);

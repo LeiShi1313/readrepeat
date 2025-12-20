@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, copyFile } from 'fs/promises';
 import path from 'path';
 
 export async function POST(
@@ -21,27 +21,60 @@ export async function POST(
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
     }
 
-    // Parse multipart form data
-    const formData = await request.formData();
-    const audioFile = formData.get('audio') as File;
-
-    if (!audioFile) {
-      return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
-    }
-
     // Create lesson upload directory
     const uploadDir = path.join(process.cwd(), 'data', 'uploads', 'lessons', lessonId);
     await mkdir(uploadDir, { recursive: true });
 
-    // Get file extension
-    const originalName = audioFile.name;
-    const ext = path.extname(originalName) || '.wav';
-    const audioPath = path.join(uploadDir, `original${ext}`);
+    let audioPath: string;
 
-    // Write file to disk
-    const bytes = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(audioPath, buffer);
+    // Check if this is JSON (transcribeJobId) or form data (file upload)
+    const contentType = request.headers.get('content-type') || '';
+
+    let audioFileId: string | undefined;
+
+    if (contentType.includes('application/json')) {
+      // Handle transcribed audio reuse
+      const body = await request.json();
+      audioFileId = body.audioFileId;
+
+      if (!audioFileId) {
+        return NextResponse.json({ error: 'No audioFileId provided' }, { status: 400 });
+      }
+
+      // Get the audio file record
+      const audioFileRecord = await db.query.audioFiles.findFirst({
+        where: eq(schema.audioFiles.id, audioFileId),
+      });
+
+      if (!audioFileRecord) {
+        return NextResponse.json({ error: 'Audio file not found' }, { status: 404 });
+      }
+
+      const sourceAudioPath = audioFileRecord.filePath;
+      const ext = path.extname(sourceAudioPath);
+      audioPath = path.join(uploadDir, `original${ext}`);
+
+      // Copy the file
+      await copyFile(sourceAudioPath, audioPath);
+    } else {
+      // Handle file upload
+      const formData = await request.formData();
+      const audioFile = formData.get('audio') as File;
+
+      if (!audioFile) {
+        return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
+      }
+
+      // Get file extension
+      const originalName = audioFile.name;
+      const ext = path.extname(originalName) || '.wav';
+      audioPath = path.join(uploadDir, `original${ext}`);
+
+      // Write file to disk
+      const bytes = await audioFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      await writeFile(audioPath, buffer);
+    }
 
     // Delete existing sentences (for re-upload case)
     await db.delete(schema.sentences).where(eq(schema.sentences.lessonId, lessonId));
@@ -62,7 +95,11 @@ export async function POST(
     await db.insert(schema.jobs).values({
       id: jobId,
       type: 'PROCESS_LESSON',
-      payloadJson: JSON.stringify({ lessonId }),
+      payloadJson: JSON.stringify({
+        lessonId,
+        // Include audioFileId if reusing transcribed audio
+        audioFileId: audioFileId || undefined,
+      }),
       status: schema.JOB_STATUS.PENDING,
     });
 

@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "npx tsx src/lib/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@serwist/next": "^9.2.3",

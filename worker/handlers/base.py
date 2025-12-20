@@ -54,11 +54,17 @@ class JobHandler(ABC):
 
     def complete(self, job_id: str, result: Dict[str, Any]) -> None:
         """Report job completion to the API."""
+        # Pass known parameters directly, rest goes in result
+        sentences = result.pop('sentences', None)
+        updated_sentences = result.pop('updated_sentences', None)
+
         report_job_status(
             job_id=job_id,
             status='COMPLETED',
             job_type=self.job_type,
-            **result
+            sentences=sentences,
+            updated_sentences=updated_sentences,
+            result=result if result else None,
         )
 
     def fail(self, job_id: str, error: str) -> None:

@@ -23,9 +23,14 @@ def process_lesson(
     foreign_lang: str = 'en',
     translation_lang: str = 'zh',
     whisper_model: str = 'base',
+    cached_transcription: Dict[str, Any] = None,
 ) -> List[Dict[str, Any]]:
     """
     Process a lesson: segment, transcribe, align, slice
+
+    Args:
+        cached_transcription: Optional pre-existing transcription with word timings
+                            from audio_files table. If provided, skips Whisper.
 
     Returns list of sentence dictionaries ready for DB insertion
     """
@@ -48,11 +53,16 @@ def process_lesson(
     normalized_path = os.path.join(audio_dir, 'normalized.wav')
     normalize_audio(audio_path, normalized_path)
 
-    # 3. Transcribe with word-level timestamps
-    logger.info(f'Step 3: Transcribing audio (model: {whisper_model})')
-    transcript_words = transcribe_audio(normalized_path, foreign_lang, whisper_model)
+    # 3. Transcribe with word-level timestamps (or reuse cached transcription)
+    if cached_transcription and cached_transcription.get('words'):
+        logger.info('Step 3: Reusing cached transcription')
+        transcript_words = cached_transcription['words']
+        logger.info(f'Cached transcription has {len(transcript_words)} words')
+    else:
+        logger.info(f'Step 3: Transcribing audio (model: {whisper_model})')
+        transcript_words = transcribe_audio(normalized_path, foreign_lang, whisper_model)
 
-    logger.info(f'Transcribed {len(transcript_words)} words')
+    logger.info(f'Using {len(transcript_words)} words for alignment')
 
     if not transcript_words:
         logger.warning('No words transcribed from audio')

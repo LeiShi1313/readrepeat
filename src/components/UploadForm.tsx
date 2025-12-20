@@ -6,6 +6,7 @@ import { useAtom } from 'jotai';
 import { cn } from '@/lib/utils';
 import { foreignLangAtom, translationLangAtom, whisperModelAtom } from '@/lib/atoms';
 import { TTSOptions } from './TTSOptions';
+import { TranscribeButton } from './TranscribeButton';
 
 export function UploadForm() {
   const router = useRouter();
@@ -28,7 +29,10 @@ export function UploadForm() {
 
   // TTS state
   const [ttsAvailable, setTtsAvailable] = useState(false);
-  const [audioMode, setAudioMode] = useState<'upload' | 'tts'>('upload');
+  const [audioMode, setAudioMode] = useState<'upload' | 'tts' | 'transcribed'>('upload');
+
+  // Transcribed audio state
+  const [transcribedAudioFileId, setTranscribedAudioFileId] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch translation config
@@ -109,10 +113,40 @@ export function UploadForm() {
 
       const data = await res.json();
       setLessonId(data.id);
+      // Auto-select transcribed mode if we have transcribed audio
+      if (transcribedAudioFileId) {
+        setAudioMode('transcribed');
+      }
       setStep('audio');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUseTranscribedAudio = async () => {
+    if (!lessonId || !transcribedAudioFileId) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioFileId: transcribedAudioFileId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to use transcribed audio');
+      }
+
+      // Redirect to lesson page
+      router.push(`/lesson/${lessonId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
       setIsLoading(false);
     }
   };
@@ -201,9 +235,23 @@ export function UploadForm() {
           </div>
         )}
 
-        {/* Mode tabs - only show if TTS is available */}
-        {ttsAvailable && (
+        {/* Mode tabs - show if TTS is available or transcribed audio exists */}
+        {(ttsAvailable || transcribedAudioFileId) && (
           <div className="flex border-b border-gray-200 mb-6">
+            {transcribedAudioFileId && (
+              <button
+                type="button"
+                onClick={() => setAudioMode('transcribed')}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  audioMode === 'transcribed'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                )}
+              >
+                Use Transcribed Audio
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setAudioMode('upload')}
@@ -216,18 +264,20 @@ export function UploadForm() {
             >
               Upload Audio
             </button>
-            <button
-              type="button"
-              onClick={() => setAudioMode('tts')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                audioMode === 'tts'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              )}
-            >
-              Generate with TTS
-            </button>
+            {ttsAvailable && (
+              <button
+                type="button"
+                onClick={() => setAudioMode('tts')}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  audioMode === 'tts'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                )}
+              >
+                Generate with TTS
+              </button>
+            )}
           </div>
         )}
 
@@ -285,6 +335,41 @@ export function UploadForm() {
             disabled={isLoading}
             onError={setError}
           />
+        )}
+
+        {/* Transcribed audio mode */}
+        {audioMode === 'transcribed' && transcribedAudioFileId && (
+          <div className="border border-green-200 bg-green-50 rounded-lg p-6 text-center">
+            <svg className="w-12 h-12 mx-auto mb-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-green-800 mb-2">Transcribed Audio Available</h3>
+            <p className="text-sm text-green-700 mb-4">
+              Use the audio file you uploaded for transcription. No need to upload again.
+            </p>
+            <button
+              onClick={handleUseTranscribedAudio}
+              disabled={isLoading}
+              className={cn(
+                'px-6 py-3 rounded-lg font-medium transition-colors',
+                isLoading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              )}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                'Use Transcribed Audio'
+              )}
+            </button>
+          </div>
         )}
       </div>
     );
@@ -373,9 +458,18 @@ export function UploadForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Foreign Text <span className="text-red-500">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            Foreign Text <span className="text-red-500">*</span>
+          </label>
+          <TranscribeButton
+            onTranscribed={(text, audioFileId) => {
+              setForeignText(text);
+              setTranscribedAudioFileId(audioFileId);
+            }}
+            whisperModel={whisperModel}
+          />
+        </div>
         <textarea
           value={foreignText}
           onChange={(e) => setForeignText(e.target.value)}

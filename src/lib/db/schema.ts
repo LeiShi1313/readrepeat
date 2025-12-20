@@ -73,6 +73,35 @@ export const jobs = sqliteTable('jobs', {
   type: text('type').notNull(),
   payloadJson: text('payload_json').notNull(),
   status: text('status').notNull().default(JOB_STATUS.PENDING),
+  resultJson: text('result_json'),
+  errorMessage: text('error_message'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+// Audio files table (stores audio metadata and transcription results)
+export const AUDIO_STATUS = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const;
+
+export type AudioStatus = (typeof AUDIO_STATUS)[keyof typeof AUDIO_STATUS];
+
+export const audioFiles = sqliteTable('audio_files', {
+  id: text('id').primaryKey(),
+  filePath: text('file_path').notNull(),
+  durationMs: integer('duration_ms'),
+  whisperModel: text('whisper_model'),
+  language: text('language'),
+  // Stores word-level transcription: [{word, start, end, probability}, ...]
+  transcriptionJson: text('transcription_json'),
+  status: text('status').notNull().default(AUDIO_STATUS.PENDING),
   errorMessage: text('error_message'),
   createdAt: text('created_at')
     .notNull()
@@ -105,5 +134,7 @@ export type Sentence = typeof sentences.$inferSelect;
 export type NewSentence = typeof sentences.$inferInsert;
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
+export type AudioFile = typeof audioFiles.$inferSelect;
+export type NewAudioFile = typeof audioFiles.$inferInsert;
 export type UserRecording = typeof userRecordings.$inferSelect;
 export type NewUserRecording = typeof userRecordings.$inferInsert;

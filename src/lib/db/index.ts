@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
 import * as schema from './schema';
 import path from 'path';
@@ -18,3 +19,13 @@ sqlite.pragma('journal_mode = WAL');
 
 export const db = drizzle(sqlite, { schema });
 export { schema };
+
+// Run migrations on startup
+const migrationsFolder = path.join(process.cwd(), 'src/lib/db/migrations');
+if (fs.existsSync(migrationsFolder)) {
+  try {
+    migrate(db, { migrationsFolder });
+  } catch (error) {
+    console.error('Migration error:', error);
+  }
+}

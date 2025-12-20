@@ -37,6 +37,58 @@ def poll_job() -> Optional[Dict[str, Any]]:
         return None
 
 
+def update_audio_file(
+    audio_file_id: str,
+    *,
+    transcription: Optional[Dict[str, Any]] = None,
+    duration_ms: Optional[int] = None,
+    language: Optional[str] = None,
+    status: Optional[str] = None,
+    error: Optional[str] = None,
+) -> bool:
+    """
+    Update an audio file record with transcription data.
+
+    Args:
+        audio_file_id: The audio file ID
+        transcription: Word-level transcription data
+        duration_ms: Audio duration in milliseconds
+        language: Detected language
+        status: New status (COMPLETED, FAILED, etc.)
+        error: Error message if failed
+
+    Returns:
+        True if the update was successful, False otherwise.
+    """
+    payload: Dict[str, Any] = {
+        'audioFileId': audio_file_id,
+    }
+
+    if transcription is not None:
+        payload['transcription'] = transcription
+    if duration_ms is not None:
+        payload['durationMs'] = duration_ms
+    if language is not None:
+        payload['language'] = language
+    if status is not None:
+        payload['status'] = status
+    if error is not None:
+        payload['errorMessage'] = error
+
+    try:
+        response = requests.patch(
+            f'{API_BASE_URL}/api/audio-files/{audio_file_id}',
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        logger.info(f'Updated audio file {audio_file_id}')
+        return True
+    except Exception as e:
+        logger.error(f'Error updating audio file {audio_file_id}: {e}')
+        return False
+
+
 def report_job_status(
     job_id: str,
     status: Literal['COMPLETED', 'FAILED'],
@@ -45,6 +97,7 @@ def report_job_status(
     sentences: Optional[List[Dict[str, Any]]] = None,
     updated_sentences: Optional[List[Dict[str, Any]]] = None,
     error: Optional[str] = None,
+    result: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """
     Report job status to the API.
@@ -59,6 +112,7 @@ def report_job_status(
         sentences: New sentences for PROCESS_LESSON/GENERATE_TTS_LESSON completion
         updated_sentences: Updated sentences for RESLICE_AUDIO completion
         error: Error message for failed jobs
+        result: Result data for TRANSCRIBE_AUDIO jobs
 
     Returns:
         True if the status was reported successfully, False otherwise.
@@ -75,6 +129,8 @@ def report_job_status(
         payload['updatedSentences'] = updated_sentences
     if error is not None:
         payload['errorMessage'] = error
+    if result is not None:
+        payload['result'] = result
 
     try:
         response = requests.post(
