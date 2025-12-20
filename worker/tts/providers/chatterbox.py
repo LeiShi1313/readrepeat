@@ -46,32 +46,9 @@ class ChatterboxTTSProvider(TTSProvider):
             return False
 
     def get_voices(self) -> List[str]:
-        """Fetch available voices from Chatterbox API."""
-        if self._voices_cache is not None:
-            return self._voices_cache
-
-        base_url = self._get_base_url()
-        if not base_url:
-            return []
-
-        try:
-            response = requests.get(f"{base_url}/voices", timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            # API may return list of voice objects or strings
-            voices = []
-            for v in data:
-                if isinstance(v, str):
-                    voices.append(v)
-                elif isinstance(v, dict):
-                    voices.append(v.get('id') or v.get('name') or str(v))
-                else:
-                    voices.append(str(v))
-            self._voices_cache = voices
-            return voices
-        except Exception as e:
-            logger.warning(f"Failed to fetch Chatterbox voices: {e}")
-            return []
+        """Return default voice for Chatterbox (uses voice cloning with default sample)."""
+        # Chatterbox uses voice cloning, so we just provide a default voice name
+        return ["default"]
 
     def get_models(self) -> List[str]:
         """Chatterbox uses a single model."""

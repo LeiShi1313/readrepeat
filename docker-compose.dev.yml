@@ -2,6 +2,17 @@
 # Run with: docker compose -f docker-compose.dev.yml up --build
 
 services:
+  # Chatterbox TTS Service (optional - for local TTS generation)
+  chatterbox:
+    image: travisvn/chatterbox-tts-api:cpu
+    ports:
+      - "4123:5123"
+    environment:
+      - USE_MULTILINGUAL_MODEL=true
+    volumes:
+      - chatterbox_voices:/app/voices
+    restart: unless-stopped
+
   # Next.js Web Application - Development mode with hot reload
   web:
     build:
@@ -14,11 +25,14 @@ services:
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
+      - CHATTERBOX_API_URL=http://chatterbox:5123
     volumes:
       - ./src:/app/src
       - ./public:/app/public
       - ./data:/app/data
     restart: unless-stopped
+    depends_on:
+      - chatterbox
 
   # Python Worker - with auto-reload on file changes
   worker:
@@ -33,12 +47,15 @@ services:
       - WHISPER_DEVICE=cpu
       - WHISPER_COMPUTE_TYPE=int8
       - WHISPER_MODEL=base
+      - CHATTERBOX_API_URL=http://chatterbox:5123
     volumes:
       - ./worker:/app
       - ./data:/app/data
     restart: unless-stopped
     depends_on:
       - web
+      - chatterbox
 
 volumes:
   data:
+  chatterbox_voices:
