@@ -54,10 +54,10 @@ export async function POST(
       );
     }
 
-    // Check lesson status - should be UPLOADED (text entered, no audio yet)
-    if (lesson.status !== schema.LESSON_STATUS.UPLOADED) {
+    // Check lesson status - allow UPLOADED (no audio) or READY (regenerate audio)
+    if (lesson.status !== schema.LESSON_STATUS.UPLOADED && lesson.status !== schema.LESSON_STATUS.READY) {
       return NextResponse.json(
-        { error: 'Lesson already has audio or is being processed' },
+        { error: 'Lesson is being processed or in an invalid state' },
         { status: 400 }
       );
     }
