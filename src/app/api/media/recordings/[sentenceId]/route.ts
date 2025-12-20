@@ -45,7 +45,8 @@ export async function GET(
       headers: {
         'Content-Length': String(fileSize),
         'Content-Type': mimeType,
-        'Cache-Control': 'public, max-age=31536000',
+        'Cache-Control': 'no-cache',
+        'ETag': `"${recording.id}"`,
       },
     });
   } catch (error) {

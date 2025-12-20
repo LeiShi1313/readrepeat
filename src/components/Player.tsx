@@ -79,7 +79,7 @@ export function Player({
     () => lesson.sentences.map((s) => s.id),
     [lesson.sentences]
   );
-  const { hasRecording, markRecordingAdded, markRecordingRemoved } = useRecordingStatus(sentenceIds);
+  const { hasRecording, getRecordingInfo, markRecordingAdded, markRecordingRemoved } = useRecordingStatus(sentenceIds);
 
   // Clear playing recording state when audio stops
   useEffect(() => {
@@ -104,10 +104,12 @@ export function Player({
     if (idx !== -1) {
       setCurrentSentenceIdx(idx);
     }
-    const url = `/api/media/recordings/${sentenceId}`;
+    // Add recording ID for cache-busting
+    const recordingInfo = getRecordingInfo(sentenceId);
+    const url = `/api/media/recordings/${sentenceId}${recordingInfo ? `?v=${recordingInfo.id}` : ''}`;
     setPlayingRecordingId(sentenceId);
     playClip(url);
-  }, [playClip, lesson.sentences]);
+  }, [playClip, lesson.sentences, getRecordingInfo]);
 
   // Auto-cache after playing a clip
   useEffect(() => {

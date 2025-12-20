@@ -114,9 +114,9 @@ export function WaveformComparison({
     });
     recordingWsRef.current = recordingWs;
 
-    // Load audio
+    // Load audio (add cache-busting for recordings)
     originalWs.load(originalUrl);
-    recordingWs.load(recordingUrl);
+    recordingWs.load(`${recordingUrl}?v=${recordingVersion}`);
 
     // Event handlers
     originalWs.on('ready', () => setIsOriginalReady(true));
