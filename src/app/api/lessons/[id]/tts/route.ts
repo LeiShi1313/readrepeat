@@ -11,18 +11,34 @@ export async function POST(
     const { id: lessonId } = await params;
     const body = await request.json();
     const {
+      provider = 'gemini',
       voiceName = 'Zephyr',
       model = 'gemini-2.5-flash-preview-tts',
       speakerMode = 'article',
       voice2Name = 'Kore',
     } = body;
 
-    // Check if GEMINI_API_KEY is configured
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim().length === 0) {
+    // Check if the requested provider is configured
+    if (provider === 'gemini') {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey || geminiKey.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Gemini TTS not configured' },
+          { status: 503 }
+        );
+      }
+    } else if (provider === 'chatterbox') {
+      const chatterboxUrl = process.env.CHATTERBOX_API_URL;
+      if (!chatterboxUrl || chatterboxUrl.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Chatterbox TTS not configured' },
+          { status: 503 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: 'TTS service not configured' },
-        { status: 503 }
+        { error: `Unknown TTS provider: ${provider}` },
+        { status: 400 }
       );
     }
 
@@ -53,6 +69,7 @@ export async function POST(
       type: 'GENERATE_TTS_LESSON',
       payloadJson: JSON.stringify({
         lessonId,
+        provider,
         voiceName,
         ttsModel: model,
         speakerMode,
