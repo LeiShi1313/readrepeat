@@ -19,8 +19,16 @@ RUN npm ci
 # Copy config files needed for dev server
 COPY tsconfig.json next.config.ts postcss.config.mjs ./
 
-# Create data directory
-RUN mkdir -p /app/data/uploads/lessons
+# Create non-root user with UID 1001 and GID 1001 (matches production)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --gid 1001 nextjs
+
+# Create data directory with correct permissions
+RUN mkdir -p /app/data/uploads/lessons && \
+    chown -R nextjs:nodejs /app/data && \
+    chmod -R 775 /app/data
+
+USER nextjs
 
 EXPOSE 3000
 

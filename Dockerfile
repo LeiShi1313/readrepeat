@@ -48,8 +48,10 @@ COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
 
-# Create data directory with correct permissions
-RUN mkdir -p /app/data/uploads/lessons && chown -R nextjs:nodejs /app/data
+# Create data directory with correct permissions (group-writable for shared access)
+RUN mkdir -p /app/data/uploads/lessons && \
+    chown -R nextjs:nodejs /app/data && \
+    chmod -R 775 /app/data
 
 USER nextjs
 

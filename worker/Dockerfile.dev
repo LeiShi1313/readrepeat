@@ -15,5 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install watchdog for file watching
 RUN pip install --no-cache-dir watchdog[watchmedo]
 
+# Create non-root user with UID 1001 and GID 1001 (matches web container)
+RUN groupadd --gid 1001 appgroup && \
+    useradd --create-home --shell /bin/bash --uid 1001 --gid 1001 worker && \
+    chown -R worker:appgroup /app
+
+USER worker
+
 # Use watchmedo to auto-restart on file changes
 CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
