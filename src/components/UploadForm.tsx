@@ -38,6 +38,7 @@ export function UploadForm() {
     defaultDialogVoices?: string[];
   }>>([]);
   const [audioMode, setAudioMode] = useState<'upload' | 'tts'>('upload');
+  const [selectedTtsProvider, setSelectedTtsProvider] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [selectedTtsModel, setSelectedTtsModel] = useState<string>('');
   const [speakerMode, setSpeakerMode] = useState<'article' | 'dialog'>('article');
@@ -62,6 +63,7 @@ export function UploadForm() {
         setTtsProviders(data.providers || []);
         if (data.providers?.length > 0) {
           const provider = data.providers[0];
+          setSelectedTtsProvider(provider.id);
           setSelectedVoice(provider.defaultVoice);
           setSelectedTtsModel(provider.defaultModel);
           setSpeakerMode(provider.defaultSpeakerMode || 'article');
@@ -178,6 +180,23 @@ export function UploadForm() {
     }
   };
 
+  const handleTtsProviderChange = (providerId: string) => {
+    setSelectedTtsProvider(providerId);
+    const provider = ttsProviders.find(p => p.id === providerId);
+    if (provider) {
+      setSelectedVoice(provider.defaultVoice);
+      setSelectedTtsModel(provider.defaultModel);
+      setSpeakerMode(provider.defaultSpeakerMode as 'article' | 'dialog' || 'article');
+      const dialogVoices = provider.defaultDialogVoices;
+      if (dialogVoices && dialogVoices.length >= 2) {
+        setSelectedVoice(dialogVoices[0]);
+        setSelectedVoice2(dialogVoices[1]);
+      } else if (provider.voices?.length >= 2) {
+        setSelectedVoice2(provider.voices[1]);
+      }
+    }
+  };
+
   const handleTtsGenerate = async () => {
     if (!lessonId || !selectedVoice) return;
 
@@ -189,6 +208,7 @@ export function UploadForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          provider: selectedTtsProvider,
           voiceName: selectedVoice,
           model: selectedTtsModel,
           speakerMode,
@@ -234,7 +254,7 @@ export function UploadForm() {
 
   if (step === 'audio') {
     const ttsAvailable = ttsProviders.length > 0;
-    const currentProvider = ttsProviders[0];
+    const currentProvider = ttsProviders.find(p => p.id === selectedTtsProvider) || ttsProviders[0];
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -341,6 +361,27 @@ export function UploadForm() {
         {/* TTS mode */}
         {audioMode === 'tts' && currentProvider && (
           <div className="space-y-4">
+            {/* Provider Selection - only show if multiple providers */}
+            {ttsProviders.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  TTS Provider
+                </label>
+                <select
+                  value={selectedTtsProvider}
+                  onChange={(e) => handleTtsProviderChange(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 bg-white"
+                >
+                  {ttsProviders.map((provider) => (
+                    <option key={provider.id} value={provider.id}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Speaker Mode Toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
