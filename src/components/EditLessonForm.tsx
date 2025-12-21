@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn, hasSpeakerTags, stripSpeakerTags } from '@/lib/utils';
 import { TTSOptions } from './TTSOptions';
 import { TranscribeButton } from './TranscribeButton';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -12,6 +12,7 @@ import { AudioDropzone } from './form/AudioDropzone';
 import { AudioModeTabs, AudioMode } from './form/AudioModeTabs';
 import { useTranslationConfig } from '@/hooks/useTranslationConfig';
 import { useTTSConfig } from '@/hooks/useTTSConfig';
+import { Dialog, DialogHeader, DialogContent, DialogFooter, DialogCancelButton, DialogConfirmButton } from './ui/Dialog';
 
 interface Lesson {
   id: string;
@@ -21,6 +22,7 @@ interface Lesson {
   foreignLang: string;
   translationLang: string;
   whisperModel: string;
+  isDialog: number;
 }
 
 interface EditLessonFormProps {
@@ -39,8 +41,14 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const [foreignLang, setForeignLang] = useState(lesson.foreignLang);
   const [translationLang, setTranslationLang] = useState(lesson.translationLang);
   const [whisperModel, setWhisperModel] = useState(lesson.whisperModel);
+  const [isDialog, setIsDialog] = useState(!!lesson.isDialog);
 
   const [audioMode, setAudioMode] = useState<AudioMode>('upload');
+
+  // Dialog detection state
+  const [showDialogConfirm, setShowDialogConfirm] = useState(false);
+  const [pendingText, setPendingText] = useState('');
+  const previousTextRef = useRef(lesson.foreignTextRaw);
 
   const { ttsAvailable } = useTTSConfig();
 
@@ -59,13 +67,43 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
 
   const handleTranslate = () => translate(foreignText);
 
+  // Handle foreign text change - detect pasted dialog text
+  const handleForeignTextChange = (newText: string) => {
+    const previousLen = previousTextRef.current.length;
+    const isPaste = newText.length - previousLen > 50; // Likely a paste if adding 50+ chars at once
+
+    if (isPaste && !isDialog && hasSpeakerTags(newText)) {
+      // Show confirmation dialog
+      setPendingText(newText);
+      setShowDialogConfirm(true);
+    } else {
+      setForeignText(newText);
+    }
+    previousTextRef.current = newText;
+  };
+
+  // Handle dialog mode confirmation
+  const handleConfirmDialog = () => {
+    setForeignText(stripSpeakerTags(pendingText));
+    setIsDialog(true);
+    setShowDialogConfirm(false);
+    setPendingText('');
+  };
+
+  const handleDenyDialog = () => {
+    setForeignText(pendingText);
+    setShowDialogConfirm(false);
+    setPendingText('');
+  };
+
   const hasChanges =
     foreignText !== lesson.foreignTextRaw ||
     translationText !== lesson.translationTextRaw ||
     title !== (lesson.title || '') ||
     foreignLang !== lesson.foreignLang ||
     translationLang !== lesson.translationLang ||
-    whisperModel !== lesson.whisperModel;
+    whisperModel !== lesson.whisperModel ||
+    isDialog !== !!lesson.isDialog;
 
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +121,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           foreignLang,
           translationLang,
           whisperModel,
+          isDialog,
         }),
       });
 
@@ -202,7 +241,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           </div>
           <textarea
             value={foreignText}
-            onChange={(e) => setForeignText(e.target.value)}
+            onChange={(e) => handleForeignTextChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none h-40 resize-none"
             placeholder="Paste the paragraph in the foreign language here..."
             required
@@ -211,6 +250,21 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           <p className="text-xs text-gray-400 mt-1">
             Changing text will trigger re-alignment with the audio
           </p>
+          <label className="flex items-center gap-2 mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isDialog}
+              onChange={(e) => setIsDialog(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Dialog mode (2 speakers)</span>
+          </label>
+          {isDialog && (
+            <p className="text-xs text-gray-500 mt-1 ml-6">
+              Each line alternates between two speakers
+            </p>
+          )}
         </div>
 
         <div>
@@ -316,12 +370,33 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         {audioMode === 'tts' && (
           <TTSOptions
             lessonId={lesson.id}
+            isDialog={isDialog}
             disabled={isLoading}
             onError={setError}
             onSuccess={() => router.refresh()}
           />
         )}
       </div>
+
+      {/* Dialog detection confirmation */}
+      <Dialog open={showDialogConfirm} onClose={handleDenyDialog} maxWidth="md">
+        <DialogHeader
+          title="Dialog Detected"
+          description="The pasted text contains speaker tags (e.g., 'Speaker 1:', 'Speaker 2:'). Would you like to enable dialog mode?"
+        />
+        <DialogContent>
+          <p className="text-sm text-gray-600">
+            If you confirm, the speaker tags will be removed and dialog mode will be enabled.
+            Each line will alternate between two speakers during TTS generation.
+          </p>
+        </DialogContent>
+        <DialogFooter>
+          <DialogCancelButton onClick={handleDenyDialog}>Keep as is</DialogCancelButton>
+          <DialogConfirmButton onClick={handleConfirmDialog}>
+            Enable Dialog Mode
+          </DialogConfirmButton>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
