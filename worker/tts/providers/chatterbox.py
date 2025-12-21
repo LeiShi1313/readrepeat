@@ -9,7 +9,8 @@ from typing import List, Optional
 import requests
 
 from tts.types import TTSProvider
-from tts.providers.gemini import convert_to_wav, _parse_dialog_lines
+from audio import convert_to_wav
+from segment import parse_dialog_lines
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class ChatterboxTTSProvider(TTSProvider):
         logger.info(f"Generating Chatterbox dialog TTS with voice1={voice1}, voice2={voice2}")
 
         voices = {1: voice1, 2: voice2}
-        dialog_lines = _parse_dialog_lines(text)
+        dialog_lines = parse_dialog_lines(text)
 
         if not dialog_lines:
             raise Exception("No dialog lines found in text")
