@@ -11,6 +11,7 @@ import {
   lessonRevealAllAtomFamily,
 } from '@/lib/atoms';
 import { useAudioCache } from '@/hooks/useAudioCache';
+import type { TagInfo } from '@/lib/utils';
 
 interface Sentence {
   id: string;
@@ -38,6 +39,7 @@ interface Lesson {
   audioOriginalPath: string | null;
   createdAt: string;
   updatedAt: string;
+  tags?: TagInfo[];
 }
 
 interface LessonPageContentProps {
@@ -83,7 +85,7 @@ export function LessonPageContent({ lesson, sentences }: LessonPageContentProps)
 
       <main>
         <Player
-          lesson={{ ...lesson, title, sentences }}
+          lesson={{ ...lesson, title, sentences, tags: lesson.tags }}
           primaryText={primaryText}
           playbackSpeed={playbackSpeed}
           revealAll={revealAll}

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, formatDate, type TagInfo } from '@/lib/utils';
+import { TagBadge } from './ui/TagBadge';
 
 interface Lesson {
   id: string;
@@ -9,6 +10,7 @@ interface Lesson {
   translationLang: string;
   createdAt: string;
   errorMessage: string | null;
+  tags?: TagInfo[];
 }
 
 interface LessonCardProps {
@@ -26,14 +28,6 @@ const STATUS_LABELS = {
   PROCESSING: 'Processing',
   FAILED: 'Failed',
 };
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 export function LessonCard({ lesson }: LessonCardProps) {
   const statusStyle = STATUS_STYLES[lesson.status as keyof typeof STATUS_STYLES];
@@ -63,6 +57,18 @@ export function LessonCard({ lesson }: LessonCardProps) {
               {formatDate(lesson.createdAt)}
             </span>
           </div>
+          {lesson.tags && lesson.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {lesson.tags.slice(0, 3).map((tag) => (
+                <TagBadge key={tag.id} name={tag.displayName} />
+              ))}
+              {lesson.tags.length > 3 && (
+                <span className="text-xs text-gray-400">
+                  +{lesson.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {statusLabel && (
           <span className={cn('text-xs px-2 py-1 rounded-full font-medium flex-shrink-0', statusStyle)}>

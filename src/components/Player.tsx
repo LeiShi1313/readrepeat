@@ -3,7 +3,9 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { SentenceRow } from './SentenceRow';
 import { DownloadIndicator } from './DownloadIndicator';
+import { TagBadge } from './ui/TagBadge';
 import type { PrimaryText } from '@/lib/atoms';
+import type { TagInfo } from '@/lib/utils';
 import { PlayerBottomBar, type AutoPlayMode } from './player';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -27,6 +29,7 @@ interface Lesson {
   translationLang: string;
   status: string;
   sentences: Sentence[];
+  tags?: TagInfo[];
 }
 
 interface PlayerProps {
@@ -251,17 +254,26 @@ export function Player({
   return (
     <div className="max-w-3xl mx-auto">
       {/* Title bar */}
-      <div className="px-4 py-3 flex items-center gap-3">
-        <h1 className="text-lg font-semibold text-gray-900 truncate min-w-0 flex-1">
-          {lesson.title}
-        </h1>
-        <DownloadIndicator
-          cached={cached}
-          total={total}
-          isDownloading={isDownloading}
-          isAllCached={isAllCached}
-          onDownloadAll={onDownloadAll}
-        />
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold text-gray-900 truncate min-w-0 flex-1">
+            {lesson.title}
+          </h1>
+          <DownloadIndicator
+            cached={cached}
+            total={total}
+            isDownloading={isDownloading}
+            isAllCached={isAllCached}
+            onDownloadAll={onDownloadAll}
+          />
+        </div>
+        {lesson.tags && lesson.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {lesson.tags.map((tag) => (
+              <TagBadge key={tag.id} name={tag.displayName} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sentence list */}
