@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { EditLessonForm } from '@/components/EditLessonForm';
-import { TTSOptions } from '@/components/TTSOptions';
+import { EditLessonForm } from '@/components/lesson-form/EditLessonForm';
+import { TTSOptions } from '@/components/lesson-form/TTSOptions';
 import { AudioDropzone } from '@/components/form/AudioDropzone';
 import { AudioModeTabs, AudioMode } from '@/components/form/AudioModeTabs';
 import { useTTSConfig } from '@/hooks/useTTSConfig';

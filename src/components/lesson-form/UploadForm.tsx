@@ -7,15 +7,15 @@ import { cn, hasSpeakerTags, stripSpeakerTags } from '@/lib/utils';
 import { foreignLangAtom, translationLangAtom, whisperModelAtom } from '@/lib/atoms';
 import { TTSOptions } from './TTSOptions';
 import { TranscribeButton } from './TranscribeButton';
-import { LoadingSpinner } from './ui/LoadingSpinner';
-import { LanguageSelect } from './ui/LanguageSelect';
-import { WhisperModelSelect } from './ui/WhisperModelSelect';
-import { AudioDropzone } from './form/AudioDropzone';
-import { AudioModeTabs, AudioMode } from './form/AudioModeTabs';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LanguageSelect } from '@/components/ui/LanguageSelect';
+import { WhisperModelSelect } from '@/components/ui/WhisperModelSelect';
+import { AudioDropzone } from '@/components/form/AudioDropzone';
+import { AudioModeTabs, AudioMode } from '@/components/form/AudioModeTabs';
 import { useTranslationConfig } from '@/hooks/useTranslationConfig';
 import { useTTSConfig } from '@/hooks/useTTSConfig';
-import { Dialog, DialogHeader, DialogContent, DialogFooter, DialogCancelButton, DialogConfirmButton } from './ui/Dialog';
-import { TagInput } from './ui/TagInput';
+import { Dialog, DialogHeader, DialogContent, DialogFooter, DialogCancelButton, DialogConfirmButton } from '@/components/ui/Dialog';
+import { TagInput } from '@/components/ui/TagInput';
 
 export function UploadForm() {
   const router = useRouter();

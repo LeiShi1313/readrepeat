@@ -1,4 +1,4 @@
-import { UploadForm } from '@/components/UploadForm';
+import { UploadForm } from '@/components/lesson-form';
 import Link from 'next/link';
 import { appConfig } from '@/lib/env';
 

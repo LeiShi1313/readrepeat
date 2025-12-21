@@ -3,7 +3,7 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { PrimaryText } from '@/lib/atoms';
-import { RecordButton } from '@/components/RecordButton';
+import { RecordButton } from '@/components/lesson-form/RecordButton';
 
 interface Sentence {
   id: string;

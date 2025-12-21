@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { EditLessonForm } from '@/components/EditLessonForm';
+import { EditLessonForm } from '@/components/lesson-form/EditLessonForm';
 import { useLessonDelete } from '@/hooks/useLessonDelete';
 
 interface Lesson {

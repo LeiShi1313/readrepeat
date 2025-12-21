@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { Player } from './Player';
-import { EditLessonForm } from '@/components/EditLessonForm';
+import { EditLessonForm } from '@/components/lesson-form/EditLessonForm';
 import { LessonHeader } from './LessonHeader';
 import {
   lessonPrimaryTextAtomFamily,
