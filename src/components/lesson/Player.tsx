@@ -3,10 +3,10 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { SentenceRow } from './SentenceRow';
 import { DownloadIndicator } from './DownloadIndicator';
-import { TagBadge } from './ui/TagBadge';
+import { TagBadge } from '@/components/ui/TagBadge';
 import type { PrimaryText } from '@/lib/atoms';
 import type { TagInfo } from '@/lib/utils';
-import { PlayerBottomBar, type AutoPlayMode } from './player';
+import { PlayerBottomBar, type AutoPlayMode } from '@/components/player';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useRecordingStatus } from '@/hooks/useRecordingStatus';

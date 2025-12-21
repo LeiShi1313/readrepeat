@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
-import { Player } from '@/components/Player';
+import { Player } from './Player';
 import { EditLessonForm } from '@/components/EditLessonForm';
-import { LessonHeader } from '@/components/LessonHeader';
+import { LessonHeader } from './LessonHeader';
 import {
   lessonPrimaryTextAtomFamily,
   lessonPlaybackSpeedAtomFamily,

@@ -1,9 +1,6 @@
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { ProcessingStatus } from '@/components/ProcessingStatus';
-import { LessonPageContent } from '@/components/LessonPageContent';
-import { FailedView } from '@/components/FailedView';
-import { UploadedView } from '@/components/UploadedView';
+import { ProcessingStatus, LessonPageContent, FailedView, UploadedView } from '@/components/lesson';
 import { notFound } from 'next/navigation';
 import { getLessonWithTags } from '@/lib/db/lessons';
 

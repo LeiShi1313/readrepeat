@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAtom } from 'jotai';
 import Link from 'next/link';
 import { PrimaryTextToggle } from './PrimaryTextToggle';
-import { PlaybackSpeedSelect } from './player/PlaybackSpeedSelect';
+import { PlaybackSpeedSelect } from '@/components/player/PlaybackSpeedSelect';
 import {
   lessonPrimaryTextAtomFamily,
   lessonPlaybackSpeedAtomFamily,
