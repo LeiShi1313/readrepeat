@@ -6,7 +6,7 @@ import os
 import uuid
 from typing import List, Dict, Any
 
-from segment import segment_text
+from segment import segment_parallel
 from transcribe import transcribe_audio
 from align import align_transcript_to_text
 from slice import slice_audio, normalize_audio
@@ -36,13 +36,14 @@ def process_lesson(
     """
     logger.info(f'Processing lesson {lesson_id}')
 
-    # 1. Segment texts into sentences
-    logger.info('Step 1: Segmenting texts')
-    foreign_sentences = segment_text(foreign_text, foreign_lang)
-    translation_sentences = segment_text(translation_text, translation_lang)
+    # 1. Segment texts into sentences (parallel to ensure aligned counts)
+    logger.info('Step 1: Segmenting texts in parallel')
+    foreign_sentences, translation_sentences = segment_parallel(
+        foreign_text, translation_text, foreign_lang, translation_lang
+    )
 
     logger.info(f'Foreign: {len(foreign_sentences)} sentences')
-    logger.info(f'Translation: {len(translation_sentences)} sentences')
+    logger.info(f'Translation: {len(translation_sentences)} sentences (aligned)')
 
     if not foreign_sentences:
         raise ValueError('No sentences found in foreign text')

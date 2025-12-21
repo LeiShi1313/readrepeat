@@ -132,6 +132,174 @@ def _segment_western(text: str, pattern: str, lang: str) -> List[str]:
     return sentences
 
 
+def merge_short_sentences(sentences: List[str], min_words: int = 2) -> List[str]:
+    """Merge sentences with fewer than min_words with the next sentence.
+
+    This helps balance sentence counts across languages where one language
+    produces short single-word sentences (e.g., German "Ja.") that get
+    translated as part of a longer sentence in another language.
+
+    Args:
+        sentences: List of sentences to potentially merge
+        min_words: Minimum word count; shorter sentences get merged forward
+
+    Returns:
+        List of sentences with short ones merged into following sentences
+    """
+    if len(sentences) <= 1:
+        return sentences
+
+    result = []
+    i = 0
+    while i < len(sentences):
+        sent = sentences[i]
+        word_count = len(sent.split())
+
+        # If short and not last, merge with next
+        if word_count < min_words and i + 1 < len(sentences):
+            sentences[i + 1] = sent + " " + sentences[i + 1]
+        else:
+            result.append(sent)
+        i += 1
+
+    return result
+
+
+def _force_merge_to_count(sentences: List[str], target: int) -> List[str]:
+    """Force merge sentences until we have exactly target count.
+
+    Merges shortest sentences first to minimize information loss.
+
+    Args:
+        sentences: List of sentences to merge
+        target: Target number of sentences
+
+    Returns:
+        List of exactly target sentences (or fewer if input was smaller)
+    """
+    if len(sentences) <= target:
+        return sentences
+
+    # Make a copy to avoid mutating the input
+    sentences = sentences.copy()
+
+    # Merge shortest sentences first
+    while len(sentences) > target:
+        # Find shortest sentence (not last, so we can merge forward)
+        min_len = float('inf')
+        min_idx = 0
+        for i, s in enumerate(sentences[:-1]):
+            if len(s) < min_len:
+                min_len = len(s)
+                min_idx = i
+
+        # Merge with next
+        sentences[min_idx] = sentences[min_idx] + " " + sentences[min_idx + 1]
+        sentences.pop(min_idx + 1)
+
+    return sentences
+
+
+def segment_parallel(
+    foreign_text: str,
+    translation_text: str,
+    foreign_lang: str,
+    translation_lang: str,
+    min_words: int = 2
+) -> Tuple[List[str], List[str]]:
+    """Segment two texts in parallel, ensuring equal sentence counts per line.
+
+    This function handles the common problem where different languages produce
+    different sentence counts for the same content. For example:
+    - German: "Ja. Wir können..." → 2 sentences
+    - English: "Yes, we can..." → 1 sentence
+
+    The algorithm:
+    1. Split both texts by newlines (preserving line correspondence)
+    2. For each line pair, segment independently
+    3. If counts differ, merge short sentences in the one with more
+    4. If still unequal, force merge to the smaller count
+    5. Flatten all line segments into final lists
+
+    Args:
+        foreign_text: Text in the foreign language
+        translation_text: Text in the translation language
+        foreign_lang: Language code for foreign text
+        translation_lang: Language code for translation text
+        min_words: Minimum words for a sentence; shorter ones may be merged
+
+    Returns:
+        Tuple of (foreign_sentences, translation_sentences) with equal lengths
+    """
+    foreign_lines = foreign_text.strip().split('\n')
+    trans_lines = translation_text.strip().split('\n')
+
+    # Pad shorter list with empty strings
+    max_lines = max(len(foreign_lines), len(trans_lines))
+    foreign_lines += [''] * (max_lines - len(foreign_lines))
+    trans_lines += [''] * (max_lines - len(trans_lines))
+
+    all_foreign = []
+    all_trans = []
+
+    for f_line, t_line in zip(foreign_lines, trans_lines):
+        f_line = f_line.strip()
+        t_line = t_line.strip()
+
+        # Skip empty line pairs
+        if not f_line and not t_line:
+            continue
+
+        # Handle case where one line is empty
+        if not f_line:
+            # Foreign is empty, add translation as-is with empty foreign placeholder
+            t_sents = segment_text(t_line, translation_lang)
+            for t_sent in t_sents:
+                all_foreign.append('')
+                all_trans.append(t_sent)
+            continue
+        if not t_line:
+            # Translation is empty, add foreign as-is with empty translation placeholder
+            f_sents = segment_text(f_line, foreign_lang)
+            for f_sent in f_sents:
+                all_foreign.append(f_sent)
+                all_trans.append('')
+            continue
+
+        # Segment both lines
+        f_sents = segment_text(f_line, foreign_lang)
+        t_sents = segment_text(t_line, translation_lang)
+
+        # Balance by merging short sentences (try foreign first)
+        prev_f_count = -1
+        while len(f_sents) > len(t_sents) and len(f_sents) > 1:
+            if len(f_sents) == prev_f_count:
+                break  # No more merging possible
+            prev_f_count = len(f_sents)
+            f_sents = merge_short_sentences(f_sents, min_words)
+
+        # Then try translation
+        prev_t_count = -1
+        while len(t_sents) > len(f_sents) and len(t_sents) > 1:
+            if len(t_sents) == prev_t_count:
+                break  # No more merging possible
+            prev_t_count = len(t_sents)
+            t_sents = merge_short_sentences(t_sents, min_words)
+
+        # Force to smaller count if still unequal
+        target = min(len(f_sents), len(t_sents))
+        if target == 0:
+            target = max(len(f_sents), len(t_sents))
+
+        f_sents = _force_merge_to_count(f_sents, target)
+        t_sents = _force_merge_to_count(t_sents, target)
+
+        all_foreign.extend(f_sents)
+        all_trans.extend(t_sents)
+
+    return all_foreign, all_trans
+
+
 def strip_speaker_tags(text: str) -> str:
     """
     Remove 'Speaker 1:' / 'Speaker 2:' tags from start of lines.
