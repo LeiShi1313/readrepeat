@@ -18,9 +18,16 @@ interface CreateSentence {
   endMs: number;
 }
 
+interface UpdateSentence {
+  id: string;
+  foreignText: string;
+  translationText: string;
+}
+
 interface Operations {
   deletes: string[];
   creates: CreateSentence[];
+  updates?: UpdateSentence[];
 }
 
 interface RequestBody {
@@ -97,6 +104,21 @@ export async function POST(
             confidence: null,
           });
           existingIds.add(sent.id);
+        }
+      }
+
+      // 3. Update text for existing sentences
+      if (operations.updates && operations.updates.length > 0) {
+        for (const update of operations.updates) {
+          if (existingIds.has(update.id)) {
+            await db
+              .update(schema.sentences)
+              .set({
+                foreignText: update.foreignText,
+                translationText: update.translationText,
+              })
+              .where(eq(schema.sentences.id, update.id));
+          }
         }
       }
     }
