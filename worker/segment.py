@@ -3,7 +3,7 @@ Sentence segmentation for multiple languages
 """
 
 import re
-from typing import List
+from typing import List, Tuple
 
 
 # Sentence ending patterns by language
@@ -152,6 +152,41 @@ def strip_speaker_tags(text: str) -> str:
         if line:
             cleaned.append(line)
     return '\n'.join(cleaned)
+
+
+def parse_dialog_lines(text: str) -> List[Tuple[int, str]]:
+    """Parse text into dialog lines with speaker identification.
+
+    Args:
+        text: Text with possible "Speaker 1:" / "Speaker 2:" tags
+
+    Returns:
+        List of (speaker_num, clean_text) tuples.
+        speaker_num is 1 or 2.
+    """
+    lines = text.strip().split('\n')
+    result = []
+    current_speaker = 1
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check for speaker tag
+        match = re.match(r'^Speaker\s*(\d+)\s*:\s*(.*)$', line, re.IGNORECASE)
+        if match:
+            speaker_num = int(match.group(1))
+            clean_text = match.group(2).strip()
+            if speaker_num in (1, 2) and clean_text:
+                result.append((speaker_num, clean_text))
+                current_speaker = speaker_num
+        else:
+            # No tag - alternate speakers
+            result.append((current_speaker, line))
+            current_speaker = 2 if current_speaker == 1 else 1
+
+    return result
 
 
 def tokenize(text: str, lang: str = 'en') -> List[str]:
