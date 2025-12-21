@@ -11,9 +11,25 @@ from typing import Dict, Any
 from handlers.base import JobHandler
 from pipeline import process_lesson
 from tts import get_provider
-from segment import strip_speaker_tags
 
 logger = logging.getLogger(__name__)
+
+
+def add_speaker_tags(text: str) -> str:
+    """Add alternating Speaker 1/Speaker 2 tags to each line.
+
+    Used to format plain text for Gemini's multi-speaker TTS API.
+    The tags tell Gemini which voice to use for each line.
+    """
+    lines = text.strip().split('\n')
+    result = []
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        speaker = 1 if i % 2 == 0 else 2
+        result.append(f'Speaker {speaker}: {line}')
+    return '\n'.join(result)
 
 
 class GenerateTtsLessonHandler(JobHandler):
@@ -61,17 +77,18 @@ class GenerateTtsLessonHandler(JobHandler):
 
         # Generate audio using TTS provider
         if speaker_mode == 'dialog':
+            # Add speaker tags for Gemini's multi-speaker TTS API
+            # The tags tell Gemini which voice to use, they're not read aloud
+            tagged_text = add_speaker_tags(foreign_text)
             logger.info(f'Generating dialog TTS for lesson {lesson["id"]} with provider={provider_id}, voice1={voice_name}, voice2={voice2_name}')
             provider.generate_tts_dialog(
-                text=foreign_text,
+                text=tagged_text,
                 output_path=audio_path,
                 voice1=voice_name,
                 voice2=voice2_name,
                 model=tts_model,
             )
-            # Strip speaker tags from text before processing
-            foreign_text = strip_speaker_tags(foreign_text)
-            translation_text = strip_speaker_tags(translation_text)
+            # foreign_text and translation_text remain unchanged (no tags to strip)
         else:
             logger.info(f'Generating TTS for lesson {lesson["id"]} with provider={provider_id}, voice={voice_name}')
             provider.generate_tts(
