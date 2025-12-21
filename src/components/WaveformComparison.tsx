@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useAbortErrorSuppressor } from '@/hooks/useAbortErrorSuppressor';
+import { formatDuration } from '@/lib/utils';
+import { PlayIcon, PauseIcon, StopIcon, CloseIcon, MicIcon } from '@/components/ui/icons';
+import { SpeedControl } from '@/components/ui/SpeedControl';
 
 interface WaveformComparisonProps {
   originalUrl: string;
@@ -24,16 +28,7 @@ export function WaveformComparison({
   const originalWsRef = useRef<WaveSurfer | null>(null);
   const recordingWsRef = useRef<WaveSurfer | null>(null);
 
-  // Suppress AbortError from WaveSurfer during unmount
-  useEffect(() => {
-    const handler = (event: PromiseRejectionEvent) => {
-      if (event.reason?.name === 'AbortError') {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener('unhandledrejection', handler);
-    return () => window.removeEventListener('unhandledrejection', handler);
-  }, []);
+  useAbortErrorSuppressor();
 
   const [isOriginalReady, setIsOriginalReady] = useState(false);
   const [isRecordingReady, setIsRecordingReady] = useState(false);
@@ -83,17 +78,6 @@ export function WaveformComparison({
     onRecordingComplete: handleRecordingDone,
   });
 
-  const adjustSpeed = (current: number, delta: number) => {
-    const newSpeed = Math.round((current + delta) * 10) / 10;
-    return Math.max(0.5, Math.min(2, newSpeed));
-  };
-
-  const formatDuration = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Initialize WaveSurfer instances
   useEffect(() => {
@@ -246,9 +230,7 @@ export function WaveformComparison({
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="text-gray-500" />
           </button>
         </div>
 
@@ -267,25 +249,7 @@ export function WaveformComparison({
               <span className="w-3 h-3 rounded-full bg-blue-500" />
               <span className="text-sm text-gray-600">Original</span>
               <div className="flex-1" />
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setOriginalSpeed(adjustSpeed(originalSpeed, -0.1))}
-                  disabled={originalSpeed <= 0.5}
-                  className="w-5 h-5 flex items-center justify-center bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 border border-gray-200 rounded text-gray-600 text-xs font-medium"
-                >
-                  −
-                </button>
-                <span className="text-xs text-gray-600 w-8 text-center tabular-nums">
-                  {originalSpeed.toFixed(1)}x
-                </span>
-                <button
-                  onClick={() => setOriginalSpeed(adjustSpeed(originalSpeed, 0.1))}
-                  disabled={originalSpeed >= 2}
-                  className="w-5 h-5 flex items-center justify-center bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 border border-gray-200 rounded text-gray-600 text-xs font-medium"
-                >
-                  +
-                </button>
-              </div>
+              <SpeedControl speed={originalSpeed} onSpeedChange={setOriginalSpeed} />
             </div>
             <div
               ref={originalContainerRef}
@@ -299,25 +263,7 @@ export function WaveformComparison({
               <span className="w-3 h-3 rounded-full bg-green-500" />
               <span className="text-sm text-gray-600">My Recording</span>
               <div className="flex-1" />
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setRecordingSpeed(adjustSpeed(recordingSpeed, -0.1))}
-                  disabled={recordingSpeed <= 0.5}
-                  className="w-5 h-5 flex items-center justify-center bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 border border-gray-200 rounded text-gray-600 text-xs font-medium"
-                >
-                  −
-                </button>
-                <span className="text-xs text-gray-600 w-8 text-center tabular-nums">
-                  {recordingSpeed.toFixed(1)}x
-                </span>
-                <button
-                  onClick={() => setRecordingSpeed(adjustSpeed(recordingSpeed, 0.1))}
-                  disabled={recordingSpeed >= 2}
-                  className="w-5 h-5 flex items-center justify-center bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 border border-gray-200 rounded text-gray-600 text-xs font-medium"
-                >
-                  +
-                </button>
-              </div>
+              <SpeedControl speed={recordingSpeed} onSpeedChange={setRecordingSpeed} />
             </div>
             <div
               ref={recordingContainerRef}
@@ -333,15 +279,7 @@ export function WaveformComparison({
             disabled={isLoading || isRecording}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white text-xs sm:text-sm rounded-lg transition-colors"
           >
-            {isOriginalPlaying ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
+            {isOriginalPlaying ? <PauseIcon /> : <PlayIcon />}
             Original
           </button>
 
@@ -350,15 +288,7 @@ export function WaveformComparison({
             disabled={isLoading || isRecording}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-xs sm:text-sm rounded-lg transition-colors"
           >
-            {isRecordingPlaying ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
+            {isRecordingPlaying ? <PauseIcon /> : <PlayIcon />}
             Mine
           </button>
 
@@ -367,9 +297,7 @@ export function WaveformComparison({
             disabled={isLoading || isRecording}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white text-xs sm:text-sm rounded-lg transition-colors"
           >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <PlayIcon />
             Both
           </button>
 
@@ -378,9 +306,7 @@ export function WaveformComparison({
             disabled={isLoading || isRecording}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 text-xs sm:text-sm rounded-lg transition-colors"
           >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="1" />
-            </svg>
+            <StopIcon />
             Stop
           </button>
 
@@ -395,9 +321,7 @@ export function WaveformComparison({
                 onClick={stopRecording}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm rounded-lg transition-colors"
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <rect x="6" y="6" width="12" height="12" rx="1" />
-                </svg>
+                <StopIcon />
                 Done
               </button>
               <button
@@ -418,10 +342,7 @@ export function WaveformComparison({
               disabled={isLoading}
               className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white text-xs sm:text-sm rounded-lg transition-colors"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-              </svg>
+              <MicIcon />
               Record
             </button>
           )}
