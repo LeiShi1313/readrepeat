@@ -32,6 +32,7 @@ interface Lesson {
   foreignLang: string;
   translationLang: string;
   whisperModel: string;
+  isDialog: number;
   status: string;
   errorMessage: string | null;
   audioOriginalPath: string | null;
