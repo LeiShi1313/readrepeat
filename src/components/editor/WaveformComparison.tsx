@@ -130,10 +130,12 @@ export function WaveformComparison({
     recordingWs.on('finish', () => setIsRecordingPlaying(false));
 
     // Catch abort errors that occur during load cancellation
-    const ignoreAbortError = (err: Error) => {
-      if (err.name !== 'AbortError') {
-        console.error('WaveSurfer error:', err);
-      }
+    const ignoreAbortError = (err: unknown) => {
+      // Ignore AbortError (thrown when loading is cancelled)
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') return;
+      // Ignore empty error objects (sometimes thrown during cleanup)
+      if (err && typeof err === 'object' && Object.keys(err).length === 0) return;
+      console.error('WaveSurfer error:', err);
     };
     originalWs.on('error', ignoreAbortError);
     recordingWs.on('error', ignoreAbortError);

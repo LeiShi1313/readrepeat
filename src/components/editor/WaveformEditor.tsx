@@ -166,10 +166,12 @@ export const WaveformEditor = forwardRef<WaveformEditorHandle, WaveformEditorPro
     wavesurfer.on('timeupdate', (time) => setCurrentTime(time));
 
     // Catch abort errors that occur during load cancellation
-    wavesurfer.on('error', (err) => {
-      if (err.name !== 'AbortError') {
-        console.error('WaveSurfer error:', err);
-      }
+    wavesurfer.on('error', (err: unknown) => {
+      // Ignore AbortError (thrown when loading is cancelled)
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') return;
+      // Ignore empty error objects (sometimes thrown during cleanup)
+      if (err && typeof err === 'object' && Object.keys(err).length === 0) return;
+      console.error('WaveSurfer error:', err);
     });
 
     // Region events

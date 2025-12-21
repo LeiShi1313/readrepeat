@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { LessonList } from './LessonList';
@@ -16,28 +17,45 @@ interface SearchableHomeProps {
 }
 
 export function SearchableHome({ initialLessons, appName, headerTextClass }: SearchableHomeProps) {
+  const [showSearch, setShowSearch] = useState(false);
   const { query, setQuery, lessons, isSearching, clearSearch } = useSearchLessons({
     initialLessons,
   });
 
+  const handleSearchClick = useCallback(() => {
+    if (showSearch) {
+      clearSearch();
+    }
+    setShowSearch(!showSearch);
+  }, [showSearch, clearSearch]);
+
   const showNoResults = query.trim() && !isSearching && lessons.length === 0;
+  const hasLessons = initialLessons.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HomeHeader appName={appName} headerTextClass={headerTextClass} />
+      <HomeHeader
+        appName={appName}
+        headerTextClass={headerTextClass}
+        showSearchIcon={hasLessons}
+        isSearchOpen={showSearch}
+        onSearchClick={handleSearchClick}
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        {initialLessons.length === 0 ? (
+        {!hasLessons ? (
           <EmptyLessonsState />
         ) : (
           <>
-            <div className="mb-6">
-              <SearchBar
-                value={query}
-                onChange={setQuery}
-                placeholder="Search by title, text, or tags..."
-              />
-            </div>
+            {showSearch && (
+              <div className="mb-6">
+                <SearchBar
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search by title, text, or tags..."
+                />
+              </div>
+            )}
 
             {isSearching ? (
               <SearchLoading />
