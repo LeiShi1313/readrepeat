@@ -1,44 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  debounceMs?: number;
 }
 
 export function SearchBar({
   value,
   onChange,
   placeholder = 'Search lessons...',
-  debounceMs = 300,
 }: SearchBarProps) {
-  const [localValue, setLocalValue] = useState(value);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const handleChange = (newValue: string) => {
-    setLocalValue(newValue);
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      onChange(newValue);
-    }, debounceMs);
-  };
-
-  const handleClear = () => {
-    setLocalValue('');
-    onChange('');
-  };
-
   return (
     <div className="relative">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -58,14 +30,14 @@ export function SearchBar({
       </div>
       <input
         type="text"
-        value={localValue}
-        onChange={(e) => handleChange(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
       />
-      {localValue && (
+      {value && (
         <button
-          onClick={handleClear}
+          onClick={() => onChange('')}
           className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

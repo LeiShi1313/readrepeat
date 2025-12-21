@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { LessonCard } from '@/components/LessonCard';
 import { SearchBar } from '@/components/SearchBar';
+import { useSearchLessons } from '@/hooks/useSearchLessons';
 import type { LessonWithTags } from '@/lib/db/lessons';
 
 interface SearchableHomeProps {
@@ -13,51 +13,9 @@ interface SearchableHomeProps {
 }
 
 export function SearchableHome({ initialLessons, appName, headerTextClass }: SearchableHomeProps) {
-  const [query, setQuery] = useState('');
-  const [lessons, setLessons] = useState<LessonWithTags[]>(initialLessons);
-  const [isSearching, setIsSearching] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // If query is empty, show initial lessons
-    if (!query.trim()) {
-      setLessons(initialLessons);
-      setIsSearching(false);
-      return;
-    }
-
-    // Search via API
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    setIsSearching(true);
-
-    fetch(`/api/lessons/search?q=${encodeURIComponent(query)}`, {
-      signal: controller.signal,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setLessons(data);
-          setIsSearching(false);
-        }
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          console.error('Search failed:', err);
-          setIsSearching(false);
-        }
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [query, initialLessons]);
+  const { query, setQuery, lessons, isSearching, clearSearch } = useSearchLessons({
+    initialLessons,
+  });
 
   const showNoResults = query.trim() && !isSearching && lessons.length === 0;
 
@@ -93,7 +51,7 @@ export function SearchableHome({ initialLessons, appName, headerTextClass }: Sea
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
               </div>
             ) : showNoResults ? (
-              <NoResults query={query} onClear={() => setQuery('')} />
+              <NoResults query={query} onClear={clearSearch} />
             ) : (
               <div className="space-y-3">
                 {lessons.map((lesson) => (
