@@ -1,16 +1,12 @@
-import { db, schema } from '@/lib/db';
-import { desc } from 'drizzle-orm';
 import { LessonCard } from '@/components/LessonCard';
 import Link from 'next/link';
 import { appConfig } from '@/lib/env';
+import { getAllLessonsWithTags } from '@/lib/db/lessons';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const lessons = await db
-    .select()
-    .from(schema.lessons)
-    .orderBy(desc(schema.lessons.createdAt));
+  const lessons = await getAllLessonsWithTags();
 
   return (
     <div className="min-h-screen bg-gray-50">

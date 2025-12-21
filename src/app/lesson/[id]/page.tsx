@@ -5,6 +5,7 @@ import { LessonPageContent } from '@/components/LessonPageContent';
 import { FailedView } from '@/components/FailedView';
 import { UploadedView } from '@/components/UploadedView';
 import { notFound } from 'next/navigation';
+import { getLessonWithTags } from '@/lib/db/lessons';
 
 // Disable caching for this page
 export const dynamic = 'force-dynamic';
@@ -16,9 +17,7 @@ interface Props {
 export default async function LessonPage({ params }: Props) {
   const { id } = await params;
 
-  const lesson = await db.query.lessons.findFirst({
-    where: eq(schema.lessons.id, id),
-  });
+  const lesson = await getLessonWithTags(id);
 
   if (!lesson) {
     notFound();
