@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import { WaveformEditor, WaveformEditorHandle } from './WaveformEditor';
 import { SplitDialog } from './SplitDialog';
+import { SentenceEditDialog } from './SentenceEditDialog';
 
 interface Sentence {
   id: string;
@@ -44,7 +45,7 @@ interface FineTuneEditorProps {
 export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTuneEditorProps) {
   const router = useRouter();
   const waveformRef = useRef<WaveformEditorHandle>(null);
-  const segmentRefsMap = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const segmentRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Working copy of sentences that can be modified by merge/split
   const [workingSentences, setWorkingSentences] = useState<WorkingSentence[]>(() =>
@@ -68,6 +69,9 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
     sentenceId: string;
     splitTimeMs: number | null;
   } | null>(null);
+
+  // Edit mode state
+  const [editingSentenceId, setEditingSentenceId] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -282,6 +286,26 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
     [splitMode, workingSentences]
   );
 
+  // Handle edit sentence
+  const handleEditSentence = useCallback((sentenceId: string) => {
+    setEditingSentenceId(sentenceId);
+  }, []);
+
+  // Handle save edit
+  const handleSaveEdit = useCallback(
+    (foreignText: string, translationText: string) => {
+      if (!editingSentenceId) return;
+
+      setWorkingSentences((prev) =>
+        prev.map((s) =>
+          s.id === editingSentenceId ? { ...s, foreignText, translationText } : s
+        )
+      );
+      setEditingSentenceId(null);
+    },
+    [editingSentenceId]
+  );
+
   // Handle reset
   const handleReset = useCallback(() => {
     setWorkingSentences(
@@ -321,6 +345,23 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
       const originalIds = new Set(initialSentences.map((s) => s.id));
       const workingIds = new Set(workingSentences.map((s) => s.id));
 
+      // Find sentences with text changes (existing, non-new sentences)
+      const textUpdates = workingSentences
+        .filter((s) => {
+          if (s.isNew) return false; // New sentences are handled in creates
+          const original = originalSentenceMap.get(s.id);
+          if (!original) return false;
+          return (
+            s.foreignText !== original.foreignText ||
+            s.translationText !== original.translationText
+          );
+        })
+        .map((s) => ({
+          id: s.id,
+          foreignText: s.foreignText,
+          translationText: s.translationText,
+        }));
+
       const operations = {
         deletes: Array.from(originalIds).filter((id) => !workingIds.has(id)),
         creates: workingSentences
@@ -333,6 +374,7 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
             startMs: s.startMs,
             endMs: s.endMs,
           })),
+        updates: textUpdates,
       };
 
       const response = await fetch(`/api/lessons/${lesson.id}/fine-tune`, {
@@ -521,7 +563,7 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
                     sentence.foreignText !== original.foreignText));
 
               return (
-                <button
+                <div
                   key={sentence.id}
                   ref={(el) => {
                     if (el) {
@@ -530,8 +572,16 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
                       segmentRefsMap.current.delete(sentence.id);
                     }
                   }}
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => handleSentenceClick(sentence.id, e)}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSentenceClick(sentence.id, e as unknown as React.MouseEvent);
+                    }
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors cursor-pointer ${
                     isSelected ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''
                   }`}
                 >
@@ -554,9 +604,21 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
                       <span className="text-xs text-gray-300">
                         ({((sentence.endMs - sentence.startMs) / 1000).toFixed(1)}s)
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditSentence(sentence.id);
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Edit text"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -570,6 +632,16 @@ export function FineTuneEditor({ lesson, sentences: initialSentences }: FineTune
           splitTimeMs={splitMode.splitTimeMs}
           onConfirm={handleSplitConfirm}
           onCancel={() => setSplitMode(null)}
+          formatMs={formatMs}
+        />
+      )}
+
+      {/* Edit dialog */}
+      {editingSentenceId && (
+        <SentenceEditDialog
+          sentence={workingSentences.find((s) => s.id === editingSentenceId)!}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingSentenceId(null)}
           formatMs={formatMs}
         />
       )}
