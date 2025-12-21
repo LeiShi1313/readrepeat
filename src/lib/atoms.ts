@@ -1,7 +1,7 @@
 'use client';
 
 import { atomWithStorage } from 'jotai/utils';
-import { atomFamily } from 'jotai/utils';
+import { atomFamily } from 'jotai-family';
 
 // User preferences persisted to localStorage
 export const foreignLangAtom = atomWithStorage('readrepeat:foreignLang', 'en');
