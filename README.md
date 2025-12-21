@@ -15,11 +15,12 @@ A distraction-free shadow reading web application for language learning. Upload 
 - **Keyboard Shortcuts**: Space (play), J/K (navigate), H (reveal/hide)
 - **Multiple Language Support**: English, Chinese, Japanese, Korean, Spanish, French, German
 - **Auto Translation**: Optional integration with translation APIs (DeepL) to auto-translate foreign text
-- **Text-to-Speech**: Generate audio from text using Google Gemini TTS as an alternative to uploading audio files
+- **Text-to-Speech**: Generate audio from text using Google Gemini TTS or Chatterbox TTS as an alternative to uploading audio files
+- **Audio Pre-transcription**: Transcribe audio files before creating lessons to preview and reuse transcriptions
 
 ## Tech Stack
 
-- **Frontend/Backend**: Next.js 14 (App Router) with TypeScript
+- **Frontend/Backend**: Next.js 16 (App Router) with TypeScript
 - **Database**: SQLite with Drizzle ORM (embedded, no external services)
 - **Audio Processing**: Python worker with faster-whisper
 - **Styling**: Tailwind CSS
@@ -38,11 +39,7 @@ A distraction-free shadow reading web application for language learning. Upload 
 # Install Node.js dependencies
 npm install
 
-# Set up database
-npx drizzle-kit generate
-npx drizzle-kit migrate
-
-# Start Next.js dev server
+# Start Next.js dev server (migrations run automatically on startup)
 npm run dev
 ```
 
@@ -63,25 +60,31 @@ Open http://localhost:3000
 
 ### Docker (Recommended for Production)
 
+#### CPU Only (Default)
+
+```bash
+docker compose up --build
+```
+
 #### With AMD GPU (ROCm)
 
 ```bash
 # Find your GPU architecture
 rocminfo | grep gfx
 
-# Edit docker-compose.yml to set HSA_OVERRIDE_GFX_VERSION:
+# Edit docker-compose.gpu.yml to set HSA_OVERRIDE_GFX_VERSION:
 # - RX 6000 series: 10.3.0
 # - RX 5000 series: 10.1.0
 # - RX 7000 series: 11.0.0
 
 # Build and run
-docker compose up --build
+docker compose -f docker-compose.gpu.yml up --build
 ```
 
-#### CPU Only
+#### Development (with hot reload)
 
 ```bash
-docker compose -f docker-compose.cpu.yml up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 ## Project Structure
@@ -135,6 +138,7 @@ See `.env.example` for available configuration options.
 |----------|---------|-------------|
 | `DEEPL_API_KEY` | - | DeepL API key for auto-translation (optional) |
 | `GEMINI_API_KEY` | - | Google Gemini API key for TTS audio generation (optional) |
+| `CHATTERBOX_API_URL` | - | Chatterbox TTS API URL for self-hosted TTS (optional) |
 
 #### Worker
 
@@ -174,6 +178,8 @@ See `.env.example` for available configuration options.
 | `POST` | `/api/translate` | Translate text using specified provider |
 | `GET` | `/api/tts/config` | Get available TTS providers and voices |
 | `POST` | `/api/lessons/[id]/tts` | Generate TTS audio for lesson |
+| `POST` | `/api/transcribe` | Upload audio for standalone transcription |
+| `GET` | `/api/transcribe/[jobId]` | Poll transcription job status |
 
 ## Keyboard Shortcuts
 
