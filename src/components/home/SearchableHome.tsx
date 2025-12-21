@@ -1,11 +1,11 @@
 'use client';
 
-import { HomeHeader } from '@/components/HomeHeader';
-import { SearchBar } from '@/components/SearchBar';
-import { LessonList } from '@/components/LessonList';
-import { EmptyLessonsState } from '@/components/EmptyLessonsState';
-import { SearchNoResults } from '@/components/SearchNoResults';
-import { SearchLoading } from '@/components/SearchLoading';
+import { HomeHeader } from './HomeHeader';
+import { SearchBar } from './SearchBar';
+import { LessonList } from './LessonList';
+import { EmptyLessonsState } from './EmptyLessonsState';
+import { SearchNoResults } from './SearchNoResults';
+import { SearchLoading } from './SearchLoading';
 import { useSearchLessons } from '@/hooks/useSearchLessons';
 import type { LessonWithTags } from '@/lib/db/lessons';
 

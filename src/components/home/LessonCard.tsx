@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { cn, formatDate, type TagInfo } from '@/lib/utils';
-import { TagBadge } from './ui/TagBadge';
+import { TagBadge } from '@/components/ui/TagBadge';
 
 interface Lesson {
   id: string;

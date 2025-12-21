@@ -1,4 +1,4 @@
-import { LessonCard } from '@/components/LessonCard';
+import { LessonCard } from './LessonCard';
 import type { LessonWithTags } from '@/lib/db/lessons';
 
 interface LessonListProps {

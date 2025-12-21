@@ -1,4 +1,4 @@
-import { SearchableHome } from '@/components/SearchableHome';
+import { SearchableHome } from '@/components/home';
 import { appConfig } from '@/lib/env';
 import { getAllLessonsWithTags } from '@/lib/db/lessons';
 
