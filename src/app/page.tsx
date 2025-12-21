@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   return (
     <SearchableHome
-      lessons={lessons}
+      initialLessons={lessons}
       appName={appConfig.name}
       headerTextClass={appConfig.headerText}
     />

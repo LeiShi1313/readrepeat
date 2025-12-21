@@ -1,38 +1,65 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { LessonCard } from '@/components/LessonCard';
 import { SearchBar } from '@/components/SearchBar';
 import type { LessonWithTags } from '@/lib/db/lessons';
 
 interface SearchableHomeProps {
-  lessons: LessonWithTags[];
+  initialLessons: LessonWithTags[];
   appName: string;
   headerTextClass: string;
 }
 
-export function SearchableHome({ lessons, appName, headerTextClass }: SearchableHomeProps) {
+export function SearchableHome({ initialLessons, appName, headerTextClass }: SearchableHomeProps) {
   const [query, setQuery] = useState('');
+  const [lessons, setLessons] = useState<LessonWithTags[]>(initialLessons);
+  const [isSearching, setIsSearching] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const filteredLessons = useMemo(() => {
-    if (!query.trim()) return lessons;
+  useEffect(() => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-    const q = query.toLowerCase();
-    return lessons.filter((lesson) => {
-      // Match title
-      if (lesson.title?.toLowerCase().includes(q)) return true;
-      // Match foreign text
-      if (lesson.foreignTextRaw.toLowerCase().includes(q)) return true;
-      // Match translation text
-      if (lesson.translationTextRaw.toLowerCase().includes(q)) return true;
-      // Match tags (name is already lowercase)
-      if (lesson.tags?.some((tag) => tag.name.includes(q))) return true;
-      return false;
-    });
-  }, [lessons, query]);
+    // If query is empty, show initial lessons
+    if (!query.trim()) {
+      setLessons(initialLessons);
+      setIsSearching(false);
+      return;
+    }
 
-  const showNoResults = query.trim() && filteredLessons.length === 0;
+    // Search via API
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsSearching(true);
+
+    fetch(`/api/lessons/search?q=${encodeURIComponent(query)}`, {
+      signal: controller.signal,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setLessons(data);
+          setIsSearching(false);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Search failed:', err);
+          setIsSearching(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [query, initialLessons]);
+
+  const showNoResults = query.trim() && !isSearching && lessons.length === 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -49,7 +76,7 @@ export function SearchableHome({ lessons, appName, headerTextClass }: Searchable
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        {lessons.length === 0 ? (
+        {initialLessons.length === 0 ? (
           <EmptyState />
         ) : (
           <>
@@ -61,11 +88,15 @@ export function SearchableHome({ lessons, appName, headerTextClass }: Searchable
               />
             </div>
 
-            {showNoResults ? (
+            {isSearching ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+              </div>
+            ) : showNoResults ? (
               <NoResults query={query} onClear={() => setQuery('')} />
             ) : (
               <div className="space-y-3">
-                {filteredLessons.map((lesson) => (
+                {lessons.map((lesson) => (
                   <LessonCard key={lesson.id} lesson={lesson} />
                 ))}
               </div>
