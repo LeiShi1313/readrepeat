@@ -43,6 +43,13 @@
       "when": 1766440800000,
       "tag": "0005_add_is_dialog",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1766334975031,
+      "tag": "0006_equal_wong",
+      "breakpoints": true
     }
   ]
 }

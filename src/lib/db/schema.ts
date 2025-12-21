@@ -128,6 +128,30 @@ export const userRecordings = sqliteTable('user_recordings', {
     .default(sql`(datetime('now'))`),
 });
 
+// Tags table (stores unique tags, normalized to lowercase for case-insensitivity)
+export const tags = sqliteTable('tags', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(), // Stored lowercase for case-insensitive lookups
+  displayName: text('display_name').notNull(), // Preserves original case for display
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+// Junction table for many-to-many lesson-tag relationship
+export const lessonTags = sqliteTable('lesson_tags', {
+  id: text('id').primaryKey(),
+  lessonId: text('lesson_id')
+    .notNull()
+    .references(() => lessons.id, { onDelete: 'cascade' }),
+  tagId: text('tag_id')
+    .notNull()
+    .references(() => tags.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
 // TypeScript types inferred from schema
 export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
@@ -139,3 +163,7 @@ export type AudioFile = typeof audioFiles.$inferSelect;
 export type NewAudioFile = typeof audioFiles.$inferInsert;
 export type UserRecording = typeof userRecordings.$inferSelect;
 export type NewUserRecording = typeof userRecordings.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+export type LessonTag = typeof lessonTags.$inferSelect;
+export type NewLessonTag = typeof lessonTags.$inferInsert;
