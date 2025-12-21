@@ -18,12 +18,13 @@ interface TTSProvider {
 
 interface TTSOptionsProps {
   lessonId: string;
+  isDialog: boolean;
   disabled?: boolean;
   onError?: (error: string) => void;
   onSuccess?: () => void;
 }
 
-export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOptionsProps) {
+export function TTSOptions({ lessonId, isDialog, disabled, onError, onSuccess }: TTSOptionsProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [providers, setProviders] = useState<TTSProvider[]>([]);
@@ -31,7 +32,6 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [selectedVoice2, setSelectedVoice2] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [speakerMode, setSpeakerMode] = useState<'article' | 'dialog'>('article');
 
   useEffect(() => {
     fetch('/api/tts/config')
@@ -43,7 +43,6 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
           setSelectedProvider(provider.id);
           setSelectedVoice(provider.defaultVoice);
           setSelectedModel(provider.defaultModel);
-          setSpeakerMode(provider.defaultSpeakerMode || 'article');
           if (provider.defaultDialogVoices?.length >= 2) {
             setSelectedVoice(provider.defaultDialogVoices[0]);
             setSelectedVoice2(provider.defaultDialogVoices[1]);
@@ -61,7 +60,6 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
     if (provider) {
       setSelectedVoice(provider.defaultVoice);
       setSelectedModel(provider.defaultModel);
-      setSpeakerMode(provider.defaultSpeakerMode as 'article' | 'dialog' || 'article');
       const dialogVoices = provider.defaultDialogVoices;
       if (dialogVoices && dialogVoices.length >= 2) {
         setSelectedVoice(dialogVoices[0]);
@@ -85,7 +83,6 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
           provider: selectedProvider,
           voiceName: selectedVoice,
           model: selectedModel,
-          speakerMode,
           voice2Name: selectedVoice2,
         }),
       });
@@ -139,48 +136,10 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
         </div>
       )}
 
-      {/* Speaker Mode Toggle */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Speaker Mode
-        </label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="speakerMode"
-              value="article"
-              checked={speakerMode === 'article'}
-              onChange={() => setSpeakerMode('article')}
-              disabled={isDisabled}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-700">Article (1 speaker)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="speakerMode"
-              value="dialog"
-              checked={speakerMode === 'dialog'}
-              onChange={() => setSpeakerMode('dialog')}
-              disabled={isDisabled}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-700">Dialog (2 speakers)</span>
-          </label>
-        </div>
-        {speakerMode === 'dialog' && (
-          <p className="text-xs text-gray-500 mt-1">
-            Use &quot;Speaker 1:&quot; and &quot;Speaker 2:&quot; tags at the start of lines to specify speakers
-          </p>
-        )}
-      </div>
-
       {/* Voice Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          {speakerMode === 'dialog' ? 'Speaker 1 Voice' : 'Voice'}
+          {isDialog ? 'Speaker 1 Voice' : 'Voice'}
         </label>
         <select
           value={selectedVoice}
@@ -197,7 +156,7 @@ export function TTSOptions({ lessonId, disabled, onError, onSuccess }: TTSOption
       </div>
 
       {/* Speaker 2 Voice - only shown in dialog mode */}
-      {speakerMode === 'dialog' && (
+      {isDialog && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Speaker 2 Voice
