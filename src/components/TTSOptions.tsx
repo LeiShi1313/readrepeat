@@ -1,20 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAtom } from 'jotai';
 import { cn } from '@/lib/utils';
-
-interface TTSProvider {
-  id: string;
-  name: string;
-  voices: string[];
-  models: string[];
-  defaultVoice: string;
-  defaultModel: string;
-  speakerModes?: string[];
-  defaultSpeakerMode?: string;
-  defaultDialogVoices?: string[];
-}
+import { ttsProviderAtom, ttsVoiceAtom, ttsVoice2Atom, ttsModelAtom } from '@/lib/atoms';
+import { useTTSConfig, TTSProvider } from '@/hooks/useTTSConfig';
+import { useTTSGenerate } from '@/hooks/useTTSGenerate';
 
 interface TTSOptionsProps {
   lessonId: string;
@@ -25,93 +16,91 @@ interface TTSOptionsProps {
 }
 
 export function TTSOptions({ lessonId, isDialog, disabled, onError, onSuccess }: TTSOptionsProps) {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [providers, setProviders] = useState<TTSProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [selectedVoice, setSelectedVoice] = useState<string>('');
-  const [selectedVoice2, setSelectedVoice2] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const { providers, isLoading: isLoadingConfig } = useTTSConfig();
+  const { generate, isGenerating } = useTTSGenerate(lessonId, { onSuccess, onError });
 
+  const [selectedProvider, setSelectedProvider] = useAtom(ttsProviderAtom);
+  const [selectedVoice, setSelectedVoice] = useAtom(ttsVoiceAtom);
+  const [selectedVoice2, setSelectedVoice2] = useAtom(ttsVoice2Atom);
+  const [selectedModel, setSelectedModel] = useAtom(ttsModelAtom);
+
+  // Initialize/validate selections when providers load
   useEffect(() => {
-    fetch('/api/tts/config')
-      .then((res) => res.json())
-      .then((data) => {
-        setProviders(data.providers || []);
-        if (data.providers?.length > 0) {
-          const provider = data.providers[0];
-          setSelectedProvider(provider.id);
-          setSelectedVoice(provider.defaultVoice);
-          setSelectedModel(provider.defaultModel);
-          if (provider.defaultDialogVoices?.length >= 2) {
-            setSelectedVoice(provider.defaultDialogVoices[0]);
-            setSelectedVoice2(provider.defaultDialogVoices[1]);
-          } else if (provider.voices?.length >= 2) {
-            setSelectedVoice2(provider.voices[1]);
-          }
-        }
-      })
-      .catch(() => setProviders([]));
-  }, []);
+    if (providers.length === 0) return;
 
-  const handleProviderChange = (providerId: string) => {
-    setSelectedProvider(providerId);
-    const provider = providers.find(p => p.id === providerId);
-    if (provider) {
-      setSelectedVoice(provider.defaultVoice);
-      setSelectedModel(provider.defaultModel);
-      const dialogVoices = provider.defaultDialogVoices;
+    // Check if saved provider is still valid
+    const savedProviderValid = selectedProvider && providers.some((p) => p.id === selectedProvider);
+    const provider = savedProviderValid
+      ? providers.find((p) => p.id === selectedProvider)!
+      : providers[0];
+
+    // Set provider if not saved or invalid
+    if (!savedProviderValid) {
+      setSelectedProvider(provider.id);
+    }
+
+    // Check if saved voice is valid for this provider
+    const dialogVoices = provider.defaultDialogVoices;
+    const savedVoiceValid = selectedVoice && provider.voices.includes(selectedVoice);
+    if (!savedVoiceValid) {
       if (dialogVoices && dialogVoices.length >= 2) {
         setSelectedVoice(dialogVoices[0]);
+      } else {
+        setSelectedVoice(provider.defaultVoice);
+      }
+    }
+
+    // Check if saved voice2 is valid
+    const savedVoice2Valid = selectedVoice2 && provider.voices.includes(selectedVoice2);
+    if (!savedVoice2Valid) {
+      if (dialogVoices && dialogVoices.length >= 2) {
         setSelectedVoice2(dialogVoices[1]);
       } else if (provider.voices?.length >= 2) {
         setSelectedVoice2(provider.voices[1]);
       }
     }
-  };
 
-  const handleGenerate = async () => {
-    if (!lessonId || !selectedVoice) return;
+    // Check if saved model is valid
+    const savedModelValid = selectedModel && provider.models.includes(selectedModel);
+    if (!savedModelValid) {
+      setSelectedModel(provider.defaultModel);
+    }
+  }, [providers]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    setIsLoading(true);
-
-    try {
-      const res = await fetch(`/api/lessons/${lessonId}/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: selectedProvider,
-          voiceName: selectedVoice,
-          model: selectedModel,
-          voice2Name: selectedVoice2,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to generate audio');
-      }
-
-      if (onSuccess) {
-        onSuccess();
+  const handleProviderChange = (providerId: string) => {
+    setSelectedProvider(providerId);
+    const provider = providers.find(p => p.id === providerId);
+    if (provider) {
+      // Reset to provider defaults when switching providers
+      const dialogVoices = provider.defaultDialogVoices;
+      if (dialogVoices && dialogVoices.length >= 2) {
+        setSelectedVoice(dialogVoices[0]);
+        setSelectedVoice2(dialogVoices[1]);
       } else {
-        router.push(`/lesson/${lessonId}`);
+        setSelectedVoice(provider.defaultVoice);
+        if (provider.voices?.length >= 2) {
+          setSelectedVoice2(provider.voices[1]);
+        }
       }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      if (onError) {
-        onError(errorMsg);
-      }
-      setIsLoading(false);
+      setSelectedModel(provider.defaultModel);
     }
   };
 
-  if (providers.length === 0) {
+  const handleGenerate = () => {
+    generate({
+      provider: selectedProvider,
+      voiceName: selectedVoice,
+      model: selectedModel,
+      voice2Name: selectedVoice2,
+    });
+  };
+
+  if (isLoadingConfig || providers.length === 0) {
     return null;
   }
 
   const currentProvider = providers.find(p => p.id === selectedProvider) || providers[0];
-  const isDisabled = disabled || isLoading;
+  const isDisabled = disabled || isGenerating;
 
   return (
     <div className="space-y-4">
@@ -207,7 +196,7 @@ export function TTSOptions({ lessonId, isDialog, disabled, onError, onSuccess }:
             : 'bg-blue-500 text-white hover:bg-blue-600'
         )}
       >
-        {isLoading ? (
+        {isGenerating ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -225,19 +214,4 @@ export function TTSOptions({ lessonId, isDialog, disabled, onError, onSuccess }:
       </p>
     </div>
   );
-}
-
-export function useTTSAvailable() {
-  const [available, setAvailable] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/tts/config')
-      .then((res) => res.json())
-      .then((data) => {
-        setAvailable((data.providers?.length || 0) > 0);
-      })
-      .catch(() => setAvailable(false));
-  }, []);
-
-  return available;
 }

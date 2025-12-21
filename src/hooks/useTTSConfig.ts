@@ -2,17 +2,35 @@
 
 import { useState, useEffect } from 'react';
 
+export interface TTSProvider {
+  id: string;
+  name: string;
+  voices: string[];
+  models: string[];
+  defaultVoice: string;
+  defaultModel: string;
+  speakerModes?: string[];
+  defaultSpeakerMode?: string;
+  defaultDialogVoices?: string[];
+}
+
 export function useTTSConfig() {
-  const [ttsAvailable, setTtsAvailable] = useState(false);
+  const [providers, setProviders] = useState<TTSProvider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/tts/config')
       .then((res) => res.json())
       .then((data) => {
-        setTtsAvailable((data.providers?.length || 0) > 0);
+        setProviders(data.providers || []);
       })
-      .catch(() => setTtsAvailable(false));
+      .catch(() => setProviders([]))
+      .finally(() => setIsLoading(false));
   }, []);
 
-  return { ttsAvailable };
+  return {
+    providers,
+    ttsAvailable: providers.length > 0,
+    isLoading,
+  };
 }

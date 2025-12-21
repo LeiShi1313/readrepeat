@@ -8,6 +8,12 @@ export const foreignLangAtom = atomWithStorage('readrepeat:foreignLang', 'en');
 export const translationLangAtom = atomWithStorage('readrepeat:translationLang', 'zh');
 export const whisperModelAtom = atomWithStorage('readrepeat:whisperModel', 'base');
 
+// TTS settings persisted to localStorage
+export const ttsProviderAtom = atomWithStorage('readrepeat:ttsProvider', '');
+export const ttsVoiceAtom = atomWithStorage('readrepeat:ttsVoice', '');
+export const ttsVoice2Atom = atomWithStorage('readrepeat:ttsVoice2', '');
+export const ttsModelAtom = atomWithStorage('readrepeat:ttsModel', '');
+
 // Primary text setting: which text is always visible
 export type PrimaryText = 'foreign' | 'translation';
 
