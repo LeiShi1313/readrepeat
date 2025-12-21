@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { desc } from 'drizzle-orm';
+import { createLessonTags, getTagsForLessons } from '@/lib/db/tags';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog } = body;
+    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog, tags } = body;
 
     // Validate required fields
     if (!foreignText || !translationText) {
@@ -31,6 +32,11 @@ export async function POST(request: NextRequest) {
       status: schema.LESSON_STATUS.UPLOADED,
     });
 
+    // Handle tags if provided
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      await createLessonTags(lessonId, tags);
+    }
+
     return NextResponse.json({ id: lessonId }, { status: 201 });
   } catch (error) {
     console.error('Error creating lesson:', error);
@@ -44,7 +50,18 @@ export async function GET() {
       .select()
       .from(schema.lessons)
       .orderBy(desc(schema.lessons.createdAt));
-    return NextResponse.json(allLessons);
+
+    // Fetch tags for all lessons in one batch query
+    const lessonIds = allLessons.map((l) => l.id);
+    const tagsByLesson = await getTagsForLessons(lessonIds);
+
+    // Attach tags to each lesson
+    const lessonsWithTags = allLessons.map((lesson) => ({
+      ...lesson,
+      tags: tagsByLesson[lesson.id] || [],
+    }));
+
+    return NextResponse.json(lessonsWithTags);
   } catch (error) {
     console.error('Error fetching lessons:', error);
     return NextResponse.json({ error: 'Failed to fetch lessons' }, { status: 500 });

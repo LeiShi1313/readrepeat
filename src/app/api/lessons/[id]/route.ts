@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { rm } from 'fs/promises';
 import path from 'path';
+import { getLessonTags, updateLessonTags } from '@/lib/db/tags';
 
 export async function GET(
   request: NextRequest,
@@ -26,9 +27,13 @@ export async function GET(
       .where(eq(schema.sentences.lessonId, lessonId))
       .orderBy(schema.sentences.idx);
 
+    // Fetch tags for this lesson
+    const lessonTagsList = await getLessonTags(lessonId);
+
     return NextResponse.json({
       ...lesson,
       sentences: lessonSentences,
+      tags: lessonTagsList,
     });
   } catch (error) {
     console.error('Error fetching lesson:', error);
@@ -62,7 +67,7 @@ export async function PATCH(
     }
 
     // Extract updatable fields
-    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog } = body;
+    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog, tags } = body;
 
     // Check if content changed that requires reprocessing
     const textChanged =
@@ -109,6 +114,11 @@ export async function PATCH(
       .update(schema.lessons)
       .set(updates)
       .where(eq(schema.lessons.id, lessonId));
+
+    // Handle tags update if provided
+    if (tags !== undefined && Array.isArray(tags)) {
+      await updateLessonTags(lessonId, tags);
+    }
 
     return NextResponse.json({
       message: 'Lesson updated',
