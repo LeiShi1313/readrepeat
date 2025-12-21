@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { TTSOptions } from './TTSOptions';
 import { TranscribeButton } from './TranscribeButton';
+import { LoadingSpinner } from './ui/LoadingSpinner';
+import { LanguageSelect } from './ui/LanguageSelect';
+import { WhisperModelSelect } from './ui/WhisperModelSelect';
+import { AudioDropzone } from './form/AudioDropzone';
+import { AudioModeTabs, AudioMode } from './form/AudioModeTabs';
+import { useTranslationConfig } from '@/hooks/useTranslationConfig';
+import { useTTSConfig } from '@/hooks/useTTSConfig';
 
 interface Lesson {
   id: string;
@@ -23,10 +30,8 @@ interface EditLessonFormProps {
 
 export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
 
   const [title, setTitle] = useState(lesson.title || '');
   const [foreignText, setForeignText] = useState(lesson.foreignTextRaw);
@@ -34,62 +39,25 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const [foreignLang, setForeignLang] = useState(lesson.foreignLang);
   const [translationLang, setTranslationLang] = useState(lesson.translationLang);
   const [whisperModel, setWhisperModel] = useState(lesson.whisperModel);
-  const [translateProviders, setTranslateProviders] = useState<Array<{ id: string; name: string }>>([]);
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [ttsAvailable, setTtsAvailable] = useState(false);
-  const [audioMode, setAudioMode] = useState<'upload' | 'tts'>('upload');
 
-  useEffect(() => {
-    fetch('/api/translate/config')
-      .then((res) => res.json())
-      .then((data) => {
-        setTranslateProviders(data.providers || []);
-        if (data.providers?.length > 0) {
-          setSelectedProvider(data.providers[0].id);
-        }
-      })
-      .catch(() => setTranslateProviders([]));
+  const [audioMode, setAudioMode] = useState<AudioMode>('upload');
 
-    fetch('/api/tts/config')
-      .then((res) => res.json())
-      .then((data) => {
-        setTtsAvailable((data.providers?.length || 0) > 0);
-      })
-      .catch(() => setTtsAvailable(false));
-  }, []);
+  const { ttsAvailable } = useTTSConfig();
 
-  const handleTranslate = async () => {
-    if (!foreignText.trim() || !selectedProvider) return;
+  const {
+    providers: translateProviders,
+    selectedProvider,
+    setSelectedProvider,
+    isTranslating,
+    translate,
+  } = useTranslationConfig({
+    sourceLang: foreignLang,
+    targetLang: translationLang,
+    onTranslated: setTranslationText,
+    onError: setError,
+  });
 
-    setIsTranslating(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: foreignText,
-          sourceLang: foreignLang,
-          targetLang: translationLang,
-          provider: selectedProvider,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Translation failed');
-      }
-
-      const data = await res.json();
-      setTranslationText(data.translatedText);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Translation failed');
-    } finally {
-      setIsTranslating(false);
-    }
-  };
+  const handleTranslate = () => translate(foreignText);
 
   const hasChanges =
     foreignText !== lesson.foreignTextRaw ||
@@ -126,10 +94,8 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
       const data = await res.json();
 
       if (data.reprocessing) {
-        // Refresh page to show processing status
         router.refresh();
       } else {
-        // Just go back to viewer
         onCancel();
       }
     } catch (err) {
@@ -156,41 +122,10 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         throw new Error(data.error || 'Failed to upload audio');
       }
 
-      // Refresh page to show processing status
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setIsLoading(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleAudioUpload(file);
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
-      handleAudioUpload(file);
-    } else {
-      setError('Please upload an audio file');
     }
   };
 
@@ -233,66 +168,26 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Foreign Language
-            </label>
-            <select
-              value={foreignLang}
-              onChange={(e) => setForeignLang(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              disabled={isLoading}
-            >
-              <option value="en">English</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Translation Language
-            </label>
-            <select
-              value={translationLang}
-              onChange={(e) => setTranslationLang(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              disabled={isLoading}
-            >
-              <option value="zh">Chinese</option>
-              <option value="en">English</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-            </select>
-          </div>
+          <LanguageSelect
+            value={foreignLang}
+            onChange={setForeignLang}
+            label="Foreign Language"
+            disabled={isLoading}
+          />
+          <LanguageSelect
+            value={translationLang}
+            onChange={setTranslationLang}
+            label="Translation Language"
+            disabled={isLoading}
+          />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Whisper Model
-          </label>
-          <select
-            value={whisperModel}
-            onChange={(e) => setWhisperModel(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            disabled={isLoading}
-          >
-            <option value="tiny">Tiny (39MB) - Fastest, lower accuracy</option>
-            <option value="base">Base (74MB) - Fast, good accuracy</option>
-            <option value="small">Small (244MB) - Balanced</option>
-            <option value="medium">Medium (769MB) - Slower, high accuracy</option>
-            <option value="large-v3">Large-v3 (3GB) - Slowest, highest accuracy</option>
-          </select>
-          <p className="text-xs text-gray-400 mt-1">
-            Changing the model will trigger re-processing
-          </p>
-        </div>
+        <WhisperModelSelect
+          value={whisperModel}
+          onChange={setWhisperModel}
+          disabled={isLoading}
+          hint="Changing the model will trigger re-processing"
+        />
 
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -352,10 +247,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
                 >
                   {isTranslating ? (
                     <>
-                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
+                      <LoadingSpinner size="sm" />
                       Translating...
                     </>
                   ) : (
@@ -392,10 +284,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
         >
           {isLoading ? (
             <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+              <LoadingSpinner size="md" />
               Saving...
             </span>
           ) : (
@@ -410,87 +299,20 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           Upload a new audio file or generate with TTS. This will trigger re-processing.
         </p>
 
-        {/* Mode tabs - only show if TTS is available */}
-        {ttsAvailable && (
-          <div className="flex border-b border-gray-200 mb-6">
-            <button
-              type="button"
-              onClick={() => setAudioMode('upload')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                audioMode === 'upload'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              )}
-            >
-              Upload Audio
-            </button>
-            <button
-              type="button"
-              onClick={() => setAudioMode('tts')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                audioMode === 'tts'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              )}
-            >
-              Generate with TTS
-            </button>
-          </div>
-        )}
+        <AudioModeTabs
+          activeMode={audioMode}
+          onModeChange={setAudioMode}
+          showTTS={ttsAvailable}
+        />
 
-        {/* Upload mode */}
         {audioMode === 'upload' && (
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => !isLoading && fileInputRef.current?.click()}
-            className={cn(
-              'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-              isLoading
-                ? 'cursor-not-allowed bg-gray-50'
-                : 'cursor-pointer',
-              dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-            )}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isLoading}
-            />
-            <div className="text-gray-600">
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Uploading...
-                </div>
-              ) : (
-                <>
-                  <svg className="w-10 h-10 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  <span className="font-medium">Click or drag to upload new audio</span>
-                </>
-              )}
-            </div>
-            <div className="text-sm text-gray-400 mt-2">
-              MP3, WAV, M4A, OGG, WEBM
-            </div>
-          </div>
+          <AudioDropzone
+            onUpload={handleAudioUpload}
+            onError={setError}
+            isLoading={isLoading}
+          />
         )}
 
-        {/* TTS mode */}
         {audioMode === 'tts' && (
           <TTSOptions
             lessonId={lesson.id}
