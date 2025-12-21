@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { EditLessonForm } from '@/components/EditLessonForm';
+import { useLessonDelete } from '@/hooks/useLessonDelete';
 
 interface Lesson {
   id: string;
@@ -13,6 +13,7 @@ interface Lesson {
   foreignLang: string;
   translationLang: string;
   whisperModel: string;
+  isDialog: number;
   status: string;
   errorMessage: string | null;
   audioOriginalPath: string | null;
@@ -25,30 +26,13 @@ interface UploadedViewProps {
 }
 
 export function UploadedView({ lesson }: UploadedViewProps) {
-  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/lessons/${lesson.id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        router.push('/');
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to delete lesson');
-      }
-    } catch {
-      alert('Failed to delete lesson');
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  };
+  const { deleteLesson, isDeleting } = useLessonDelete(lesson.id, {
+    onSuccess: () => setShowDeleteConfirm(false),
+    onError: (err) => alert(err),
+  });
 
   if (isEditing) {
     return <EditLessonForm lesson={lesson} onCancel={() => setIsEditing(false)} />;
@@ -110,7 +94,7 @@ export function UploadedView({ lesson }: UploadedViewProps) {
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
+                onClick={deleteLesson}
                 disabled={isDeleting}
                 className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >

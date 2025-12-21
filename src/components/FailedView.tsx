@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { EditLessonForm } from '@/components/EditLessonForm';
+import { TTSOptions } from '@/components/TTSOptions';
+import { AudioDropzone } from '@/components/form/AudioDropzone';
+import { AudioModeTabs, AudioMode } from '@/components/form/AudioModeTabs';
+import { useTTSConfig } from '@/hooks/useTTSConfig';
+import { useLessonDelete } from '@/hooks/useLessonDelete';
+import { useLessonReprocess } from '@/hooks/useLessonReprocess';
+import { useAudioUpload } from '@/hooks/useAudioUpload';
 
 interface Lesson {
   id: string;
@@ -13,6 +20,7 @@ interface Lesson {
   foreignLang: string;
   translationLang: string;
   whisperModel: string;
+  isDialog: number;
   status: string;
   errorMessage: string | null;
   audioOriginalPath: string | null;
@@ -28,30 +36,91 @@ export function FailedView({ lesson }: FailedViewProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showAudioOptions, setShowAudioOptions] = useState(false);
+  const [audioMode, setAudioMode] = useState<AudioMode>('upload');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/lessons/${lesson.id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        router.push('/');
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to delete lesson');
-      }
-    } catch {
-      alert('Failed to delete lesson');
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+  const { ttsAvailable } = useTTSConfig();
+  const { deleteLesson, isDeleting } = useLessonDelete(lesson.id, {
+    onSuccess: () => setShowDeleteConfirm(false),
+    onError: (err) => alert(err),
+  });
+  const { reprocess, error: reprocessError } = useLessonReprocess(lesson.id, {
+    onError: setError,
+  });
+  const { uploadAudio, isUploading } = useAudioUpload(lesson.id, {
+    onError: setError,
+  });
+
+  const hasAudio = !!lesson.audioOriginalPath;
+  const displayError = error || reprocessError;
+
+  const handleTryAgain = async () => {
+    if (hasAudio) {
+      reprocess();
+    } else {
+      setShowAudioOptions(true);
     }
   };
 
   if (isEditing) {
     return <EditLessonForm lesson={lesson} onCancel={() => setIsEditing(false)} />;
+  }
+
+  // Show audio options when there's no audio file
+  if (showAudioOptions) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAudioOptions(false)}
+              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
+
+          <h2 className="text-2xl font-bold mb-2">Add Audio</h2>
+          <p className="text-gray-600 mb-6">
+            Upload an audio file or generate with TTS to retry processing.
+          </p>
+
+          {displayError && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
+              {displayError}
+            </div>
+          )}
+
+          <AudioModeTabs
+            activeMode={audioMode}
+            onModeChange={setAudioMode}
+            showTTS={ttsAvailable}
+          />
+
+          {audioMode === 'upload' && (
+            <AudioDropzone
+              onUpload={uploadAudio}
+              onError={setError}
+              isLoading={isUploading}
+            />
+          )}
+
+          {audioMode === 'tts' && (
+            <TTSOptions
+              lessonId={lesson.id}
+              isDialog={!!lesson.isDialog}
+              disabled={isUploading}
+              onError={setError}
+              onSuccess={() => router.refresh()}
+            />
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -66,6 +135,13 @@ export function FailedView({ lesson }: FailedViewProps) {
         <p className="text-gray-600 mb-4">
           {lesson.errorMessage || 'An error occurred while processing the audio.'}
         </p>
+
+        {displayError && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4 text-sm">
+            {displayError}
+          </div>
+        )}
+
         <div className="flex gap-3 justify-center flex-wrap">
           <Link
             href="/"
@@ -91,14 +167,12 @@ export function FailedView({ lesson }: FailedViewProps) {
             </svg>
             Delete
           </button>
-          <form action={`/api/lessons/${lesson.id}/reprocess`} method="POST">
-            <button
-              type="submit"
-              className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Try Again
-            </button>
-          </form>
+          <button
+            onClick={handleTryAgain}
+            className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
 
@@ -118,7 +192,7 @@ export function FailedView({ lesson }: FailedViewProps) {
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
+                onClick={deleteLesson}
                 disabled={isDeleting}
                 className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >
