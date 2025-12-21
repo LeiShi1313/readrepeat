@@ -62,7 +62,7 @@ export async function PATCH(
     }
 
     // Extract updatable fields
-    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel } = body;
+    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog } = body;
 
     // Check if content changed that requires reprocessing
     const textChanged =
@@ -82,6 +82,7 @@ export async function PATCH(
     if (foreignLang !== undefined) updates.foreignLang = foreignLang;
     if (translationLang !== undefined) updates.translationLang = translationLang;
     if (whisperModel !== undefined) updates.whisperModel = whisperModel;
+    if (isDialog !== undefined) updates.isDialog = isDialog ? 1 : 0;
 
     let jobId: string | null = null;
 

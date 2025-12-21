@@ -6,7 +6,7 @@ import { desc } from 'drizzle-orm';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel } = body;
+    const { title, foreignText, translationText, foreignLang, translationLang, whisperModel, isDialog } = body;
 
     // Validate required fields
     if (!foreignText || !translationText) {
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       foreignLang: foreignLang || 'en',
       translationLang: translationLang || 'zh',
       whisperModel: whisperModel || schema.WHISPER_MODELS.BASE,
+      isDialog: isDialog ? 1 : 0,
       status: schema.LESSON_STATUS.UPLOADED,
     });
 

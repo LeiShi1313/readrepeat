@@ -14,7 +14,6 @@ export async function POST(
       provider = 'gemini',
       voiceName = 'Zephyr',
       model = 'gemini-2.5-flash-preview-tts',
-      speakerMode = 'article',
       voice2Name = 'Kore',
     } = body;
 
@@ -62,7 +61,8 @@ export async function POST(
       );
     }
 
-    // Create TTS job
+    // Create TTS job - derive speakerMode from lesson.isDialog
+    const speakerMode = lesson.isDialog ? 'dialog' : 'article';
     const jobId = uuidv4();
     await db.insert(schema.jobs).values({
       id: jobId,
