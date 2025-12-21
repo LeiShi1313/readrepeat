@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { appConfig, isDev } from "@/lib/env";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,28 +14,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ReadRepeat - Shadow Reading Practice",
+  title: `${appConfig.name} - Shadow Reading Practice`,
   description: "Practice shadow reading with aligned audio and text",
-  manifest: "/manifest.json",
+  manifest: "/api/manifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ReadRepeat",
+    title: appConfig.name,
   },
   icons: {
-    icon: [
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
+    icon: isDev
+      ? [
+          { url: "/favicon-dev.png", sizes: "32x32", type: "image/png" },
+          { url: "/icon-dev-192.png", sizes: "192x192", type: "image/png" },
+          { url: "/icon-dev-512.png", sizes: "512x512", type: "image/png" },
+        ]
+      : [
+          { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+          { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: isDev ? "/apple-touch-icon-dev.png" : "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b82f6",
+  themeColor: appConfig.themeColor,
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

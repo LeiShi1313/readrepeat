@@ -2,6 +2,7 @@ import { db, schema } from '@/lib/db';
 import { desc } from 'drizzle-orm';
 import { LessonCard } from '@/components/LessonCard';
 import Link from 'next/link';
+import { appConfig } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export default async function HomePage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">ReadRepeat</h1>
+          <h1 className={`text-xl font-bold ${appConfig.headerText}`}>{appConfig.name}</h1>
           <Link
             href="/create-lesson"
             className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
