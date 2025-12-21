@@ -6,6 +6,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Tag information interface used across the app.
+ */
+export interface TagInfo {
+  id: string;
+  name: string;
+  displayName: string;
+}
+
+/**
+ * Format date string to YYYY-MM-DD format.
+ */
+export function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Format time in seconds to mm:ss.cc format (with centiseconds)
  */
 export function formatTime(seconds: number): string {
