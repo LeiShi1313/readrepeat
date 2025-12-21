@@ -13,6 +13,8 @@ import { AudioModeTabs, AudioMode } from './form/AudioModeTabs';
 import { useTranslationConfig } from '@/hooks/useTranslationConfig';
 import { useTTSConfig } from '@/hooks/useTTSConfig';
 import { Dialog, DialogHeader, DialogContent, DialogFooter, DialogCancelButton, DialogConfirmButton } from './ui/Dialog';
+import { TagInput } from './ui/TagInput';
+import type { TagInfo } from '@/lib/utils';
 
 interface Lesson {
   id: string;
@@ -23,6 +25,7 @@ interface Lesson {
   translationLang: string;
   whisperModel: string;
   isDialog: number;
+  tags?: TagInfo[];
 }
 
 interface EditLessonFormProps {
@@ -42,6 +45,9 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
   const [translationLang, setTranslationLang] = useState(lesson.translationLang);
   const [whisperModel, setWhisperModel] = useState(lesson.whisperModel);
   const [isDialog, setIsDialog] = useState(!!lesson.isDialog);
+  const [tags, setTags] = useState<string[]>(
+    lesson.tags?.map((t) => t.displayName) || []
+  );
 
   const [audioMode, setAudioMode] = useState<AudioMode>('upload');
 
@@ -96,6 +102,11 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
     setPendingText('');
   };
 
+  const originalTags = lesson.tags?.map((t) => t.displayName) || [];
+  const tagsChanged =
+    tags.length !== originalTags.length ||
+    tags.some((t, i) => t !== originalTags[i]);
+
   const hasChanges =
     foreignText !== lesson.foreignTextRaw ||
     translationText !== lesson.translationTextRaw ||
@@ -103,7 +114,8 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
     foreignLang !== lesson.foreignLang ||
     translationLang !== lesson.translationLang ||
     whisperModel !== lesson.whisperModel ||
-    isDialog !== !!lesson.isDialog;
+    isDialog !== !!lesson.isDialog ||
+    tagsChanged;
 
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +134,7 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
           translationLang,
           whisperModel,
           isDialog,
+          tags,
         }),
       });
 
@@ -132,9 +145,10 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
 
       const data = await res.json();
 
-      if (data.reprocessing) {
-        router.refresh();
-      } else {
+      // Refresh to get updated data (including tags)
+      router.refresh();
+
+      if (!data.reprocessing) {
         onCancel();
       }
     } catch (err) {
@@ -203,6 +217,18 @@ export function EditLessonForm({ lesson, onCancel }: EditLessonFormProps) {
             placeholder="Auto-generated from first sentence if empty"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tags <span className="text-gray-400">(optional)</span>
+          </label>
+          <TagInput
+            value={tags}
+            onChange={setTags}
+            disabled={isLoading}
+            placeholder="Add tags (press Enter or comma)"
           />
         </div>
 

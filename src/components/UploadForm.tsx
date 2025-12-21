@@ -15,6 +15,7 @@ import { AudioModeTabs, AudioMode } from './form/AudioModeTabs';
 import { useTranslationConfig } from '@/hooks/useTranslationConfig';
 import { useTTSConfig } from '@/hooks/useTTSConfig';
 import { Dialog, DialogHeader, DialogContent, DialogFooter, DialogCancelButton, DialogConfirmButton } from './ui/Dialog';
+import { TagInput } from './ui/TagInput';
 
 export function UploadForm() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export function UploadForm() {
   const [audioMode, setAudioMode] = useState<AudioMode>('upload');
   const [transcribedAudioFileId, setTranscribedAudioFileId] = useState<string | null>(null);
   const [isDialog, setIsDialog] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
 
   // Dialog detection state
   const [showDialogConfirm, setShowDialogConfirm] = useState(false);
@@ -102,6 +104,7 @@ export function UploadForm() {
           translationLang,
           whisperModel,
           isDialog,
+          tags,
         }),
       });
 
@@ -279,6 +282,17 @@ export function UploadForm() {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Auto-generated from first sentence if empty"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder:text-gray-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Tags <span className="text-gray-500">(optional)</span>
+        </label>
+        <TagInput
+          value={tags}
+          onChange={setTags}
+          placeholder="Add tags (press Enter or comma)"
         />
       </div>
 
