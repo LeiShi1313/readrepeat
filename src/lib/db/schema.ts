@@ -41,6 +41,7 @@ export const lessons = sqliteTable('lessons', {
   foreignLang: text('foreign_lang').notNull().default('en'),
   translationLang: text('translation_lang').notNull().default('zh'),
   whisperModel: text('whisper_model').notNull().default(WHISPER_MODELS.BASE),
+  isDialog: integer('is_dialog').notNull().default(0),
   status: text('status').notNull().default(LESSON_STATUS.UPLOADED),
   errorMessage: text('error_message'),
   audioOriginalPath: text('audio_original_path'),

@@ -36,6 +36,13 @@
       "when": 1766354400000,
       "tag": "0004_add_audio_files",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1766440800000,
+      "tag": "0005_add_is_dialog",
+      "breakpoints": true
     }
   ]
 }
