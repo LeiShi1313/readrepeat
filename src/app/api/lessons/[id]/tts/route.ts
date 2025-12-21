@@ -53,8 +53,13 @@ export async function POST(
       );
     }
 
-    // Check lesson status - allow UPLOADED (no audio) or READY (regenerate audio)
-    if (lesson.status !== schema.LESSON_STATUS.UPLOADED && lesson.status !== schema.LESSON_STATUS.READY) {
+    // Check lesson status - allow UPLOADED (no audio), READY (regenerate), or FAILED (retry)
+    const allowedStatuses: string[] = [
+      schema.LESSON_STATUS.UPLOADED,
+      schema.LESSON_STATUS.READY,
+      schema.LESSON_STATUS.FAILED,
+    ];
+    if (!allowedStatuses.includes(lesson.status)) {
       return NextResponse.json(
         { error: 'Lesson is being processed or in an invalid state' },
         { status: 400 }
