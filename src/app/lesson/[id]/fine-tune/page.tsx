@@ -1,7 +1,7 @@
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
-import { FineTuneEditor } from '@/components/FineTuneEditor';
+import { FineTuneEditor } from '@/components/editor';
 
 export const dynamic = 'force-dynamic';
 

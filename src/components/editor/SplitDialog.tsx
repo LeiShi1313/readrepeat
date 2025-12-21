@@ -9,8 +9,8 @@ import {
   DialogFooter,
   DialogCancelButton,
   DialogConfirmButton,
-} from './ui/Dialog';
-import { TextareaField } from './ui/TextareaField';
+} from '@/components/ui/Dialog';
+import { TextareaField } from '@/components/ui/TextareaField';
 
 interface SplitDialogProps {
   sentence: WorkingSentence;

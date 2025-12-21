@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { cn } from '@/lib/utils';
-import { WaveformComparison } from './WaveformComparison';
+import { WaveformComparison } from '@/components/editor/WaveformComparison';
 
 interface RecordButtonProps {
   sentenceId: string;
